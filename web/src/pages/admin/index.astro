@@ -23,6 +23,7 @@ import Base from "../../layouts/Base.astro";
   <section class="section wrap" id="denied" hidden><p>This page is for shop staff. <a href="../account/signin/">Sign in</a> with an admin account.</p></section>
   <script>
     import { formatMoney, type Currency } from "../../../../shared/pricing";
+    import { productById } from "../../../../shared/catalog";
     import { api } from "../../lib/api";
     const $ = (id: string) => document.getElementById(id)!;
     const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -62,7 +63,7 @@ import Base from "../../layouts/Base.astro";
       $("pos").innerHTML = purchase_orders.map((p: any) => `<tr>
         <td>${esc(p.id)}<br><span class="small muted">${esc(p.created_at)}</span></td>
         <td>${esc(p.supplier)}</td>
-        <td class="small">${p.lines.map((l: any) => `${l.qty} × ${esc(l.product_id)} @ ${formatMoney(l.unit_cost, "EUR")}`).join("<br>")}</td>
+        <td class="small">${p.lines.map((l: any) => `${l.qty} × ${esc(productById.get(l.product_id)?.name ?? l.product_id)} @ ${formatMoney(l.unit_cost, "EUR")}`).join("<br>")}</td>
         <td>${formatMoney(p.total_cost, "EUR")}</td>
         <td>${esc(p.order_id ?? "Stock")}</td>
         <td>${p.status === "awaiting_approval"
