@@ -70,7 +70,11 @@ The storefront deploys as soon as the repo is pushed. The API needs a free Cloud
    Under **Variables**, set `ADMIN_EMAILS` to your email.
 5. Re-run the **Test and deploy** workflow. The API job prints the Worker URL, and the site is built to call it automatically.
 6. Register on the site with your admin email, then open `/admin/`.
-7. Demo a purchase with Stripe's test card `4242 4242 4242 4242`, any future expiry date and any CVC.
+7. Optional demo data (suppliers and a supplier order waiting for approval): `cd api && npx wrangler d1 execute regalia --remote --file scripts/seed-demo.sql`
+8. Demo a purchase with Stripe's test card `4242 4242 4242 4242`, any future expiry date and any CVC.
+
+### Private repo on the free plan
+Set the repo variable `DEPLOY_TARGET=cloudflare` and `SITE_URL=https://ashlar-regalia.pages.dev`. The storefront then deploys to Cloudflare Pages instead of GitHub Pages.
 
 ## Local development
 
