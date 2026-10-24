@@ -76,7 +76,7 @@ jobs:
           ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
           SITE_URL_OVERRIDE: ${{ vars.SITE_URL }}
         run: |
-          SITE_URL="${SITE_URL_OVERRIDE:-https://${OWNER,,}.github.io/${REPO,,}}"
+          SITE_URL="${SITE_URL_OVERRIDE:-https://${OWNER,,}.github.io/${REPO}}"
           out=$(npx wrangler deploy --var "SITE_URL:${SITE_URL}" --var "ADMIN_EMAILS:${ADMIN_EMAILS:-you@example.com}" 2>&1 | tee /dev/stderr)
           url=$(echo "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: https://nanyte25.github.io/masonic-regalia-/
+      url: https://nanyte25.github.io/Masonic-regalia-/
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -121,7 +121,7 @@ jobs:
           REPO: ${{ github.event.repository.name }}
           PUBLIC_API_URL: ${{ needs.api.outputs.url || vars.API_URL }}
         run: |
-          export SITE="https://${OWNER,,}.github.io" BASE="/${REPO,,}/"
+          export SITE="https://${OWNER,,}.github.io" BASE="/${REPO}/"
           echo "Site: $SITE$BASE  API: ${PUBLIC_API_URL:-not set}"
           npm ci && npx astro build
       # Works when Settings > Pages > Source = "GitHub Actions"
