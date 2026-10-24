@@ -14,7 +14,7 @@ const picker = Object.fromEntries(
   orders.map((b) => {
     const items = PRODUCTS.filter((p) => p.body === b && p.constitution === "ireland" && p.kind !== "ritual");
     const ranks = rankOrder.filter((r) => items.some((p) => p.rank === r));
-    return [b, { label: BODIES[b].label, colour: BODIES[b].colour, ranks, items: items.map((p) => ({ id: p.id, name: p.name, kind: p.kind, rank: p.rank, price: p.price, lead: p.leadTimeDays ?? 0 })) }];
+    return [b, { label: BODIES[b].label, colour: BODIES[b].colour, ranks, items: items.map((p) => ({ id: p.id, name: p.name, kind: p.kind, rank: p.rank, price: p.price, lead: p.leadTimeDays ?? 0, image: p.image })) }];
   }),
 );
 const featured = PRODUCTS.filter((p) => p.featured && ["ring", "cufflinks", "case", "ritual"].includes(p.kind)).slice(0, 4);
@@ -105,7 +105,7 @@ const bodyCounts = Object.fromEntries(orders.map((b) => [b, PRODUCTS.filter((p) 
     window.__picker = { picker, RANKS, base };
   </script>
   <script>
-    import { artSvg } from "../lib/art";
+    import { artSvg, productVisual } from "../lib/art";
     import { money, renderPrices } from "../lib/store";
     const { picker, RANKS, base } = (window as any).__picker;
     const art = document.getElementById("picker-art")!;
@@ -126,7 +126,7 @@ const bodyCounts = Object.fromEntries(orders.map((b) => [b, PRODUCTS.filter((p) 
       const data = picker[order];
       const items = data.items.filter((i: any) => i.rank === rank);
       const lead = items.find((i: any) => (i.kind === "apron" || i.kind === "set") && !/-(ea|fc)-/.test(i.id)) ?? items[0];
-      art.innerHTML = artSvg(lead?.kind ?? "apron", order as any, rank as any, lead?.name ?? "", rank === "member" && order === "craft" ? "ie-craft-mm-apron" : lead?.id ?? "");
+      art.innerHTML = lead?.image ? productVisual({ ...lead, body: order }, base, "large") : artSvg(lead?.kind ?? "apron", order as any, rank as any, lead?.name ?? "", rank === "member" && order === "craft" ? "ie-craft-mm-apron" : lead?.id ?? "");
       list.innerHTML = items.length
         ? items
             .map(
@@ -199,7 +199,8 @@ const bodyCounts = Object.fromEntries(orders.map((b) => [b, PRODUCTS.filter((p) 
     border: 1px solid var(--line);
     padding: 10px;
   }
-  .picker-art :global(svg) {
+  .picker-art :global(svg),
+  .picker-art :global(img) {
     width: 100%;
     height: auto;
   }

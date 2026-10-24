@@ -180,3 +180,17 @@ export function artSvg(kind: Kind, body: Body, rank: Rank = "member", label = ""
   }
   return `<svg viewBox="0 0 200 200" role="img" aria-label="${label.replace(/"/g, "")}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 }
+
+/** A product's photo if it has one, otherwise its illustration. */
+export function productVisual(
+  p: { kind: Kind; body: Body; rank: Rank; name: string; id: string; image?: string },
+  base: string,
+  size: "card" | "large" | "thumb" = "card",
+): string {
+  if (p.image) {
+    const alt = p.name.replace(/"/g, "&quot;");
+    const loading = size === "large" ? "eager" : "lazy";
+    return `<img src="${base}${p.image}" alt="${alt}" loading="${loading}" decoding="async" class="photo">`;
+  }
+  return artSvg(p.kind, p.body, p.rank, p.name, p.id);
+}

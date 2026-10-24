@@ -1,0 +1,222 @@
+{
+  "ie-craft-ea-apron": {
+    "price": 1900,
+    "stock": 40,
+    "name": "Entered Apprentice apron"
+  },
+  "ie-craft-fc-apron": {
+    "price": 2400,
+    "stock": 35,
+    "name": "Fellow Craft apron"
+  },
+  "ie-craft-mm-apron": {
+    "price": 4900,
+    "stock": 30,
+    "name": "Master Mason apron"
+  },
+  "ie-craft-officer-collar": {
+    "price": 4100,
+    "stock": 25,
+    "name": "Lodge officer collar"
+  },
+  "ie-craft-wm-apron": {
+    "price": 6900,
+    "stock": 10,
+    "name": "Worshipful Master apron"
+  },
+  "ie-craft-pm-apron": {
+    "price": 6500,
+    "stock": 12,
+    "name": "Past Master apron"
+  },
+  "ie-craft-officer-jewel": {
+    "price": 3500,
+    "stock": 50,
+    "name": "Lodge officer collar jewel"
+  },
+  "ie-prov-apron": {
+    "price": 7500,
+    "stock": 6,
+    "name": "Provincial Grand Officer apron"
+  },
+  "ie-prov-collar": {
+    "price": 5200,
+    "stock": 6,
+    "name": "Provincial collar"
+  },
+  "ie-prov-gauntlets": {
+    "price": 8100,
+    "stock": 4,
+    "name": "Provincial gauntlets"
+  },
+  "ie-prov-set": {
+    "price": 27300,
+    "stock": 3,
+    "name": "Provincial regalia set with case"
+  },
+  "ie-grand-apron": {
+    "price": 12500,
+    "stock": 2,
+    "name": "Grand Officer apron"
+  },
+  "ie-grand-jewel": {
+    "price": 9500,
+    "stock": 5,
+    "name": "Grand Officer jewel"
+  },
+  "ie-ra-companion-apron": {
+    "price": 5900,
+    "stock": 18,
+    "name": "Royal Arch companion apron"
+  },
+  "ie-ra-mark-apron": {
+    "price": 5500,
+    "stock": 14,
+    "name": "Mark apron (Irish chapter)"
+  },
+  "ie-ra-ek-apron": {
+    "price": 7000,
+    "stock": 6,
+    "name": "Excellent King apron"
+  },
+  "ie-ra-collar": {
+    "price": 4200,
+    "stock": 12,
+    "name": "Chapter officer collar"
+  },
+  "ie-km-apron": {
+    "price": 5500,
+    "stock": 8,
+    "name": "Knight Mason apron"
+  },
+  "ie-km-sash": {
+    "price": 4900,
+    "stock": 8,
+    "name": "Knight Mason sash"
+  },
+  "ie-pm-collar": {
+    "price": 6200,
+    "stock": 5,
+    "name": "Prince Mason collar"
+  },
+  "ie-kt-mantle-badge": {
+    "price": 3500,
+    "stock": 10,
+    "name": "Preceptory tunic badge"
+  },
+  "ie-kt-gauntlets": {
+    "price": 6800,
+    "stock": 6,
+    "name": "Preceptory gauntlets"
+  },
+  "en-craft-mm-apron": {
+    "price": 4600,
+    "stock": 20,
+    "name": "Master Mason apron (English)"
+  },
+  "en-prov-undress-apron": {
+    "price": 7900,
+    "stock": 4,
+    "name": "Provincial undress apron (English)"
+  },
+  "sc-craft-mm-apron": {
+    "price": 6200,
+    "stock": 6,
+    "name": "Master Mason apron (Scottish)"
+  },
+  "gloves-cotton": {
+    "price": 1100,
+    "stock": 100,
+    "name": "White cotton gloves"
+  },
+  "case-apron": {
+    "price": 4900,
+    "stock": 25,
+    "name": "Apron and collar case"
+  },
+  "case-wallet": {
+    "price": 2900,
+    "stock": 30,
+    "name": "Collar and jewel wallet"
+  },
+  "ring-sq-compass": {
+    "price": 18500,
+    "stock": 8,
+    "name": "Square and compasses signet ring"
+  },
+  "ring-ra": {
+    "price": 19500,
+    "stock": 5,
+    "name": "Royal Arch triple tau ring"
+  },
+  "cufflinks-enamel": {
+    "price": 3500,
+    "stock": 40,
+    "name": "Enamel cufflinks"
+  },
+  "cufflinks-silver": {
+    "price": 8900,
+    "stock": 15,
+    "name": "Sterling silver cufflinks"
+  },
+  "pin-forget-me-not": {
+    "price": 900,
+    "stock": 120,
+    "name": "Forget-me-not lapel pin"
+  },
+  "pin-sq-compass": {
+    "price": 800,
+    "stock": 150,
+    "name": "Square and compasses lapel pin"
+  },
+  "tie-craft": {
+    "price": 2200,
+    "stock": 40,
+    "name": "Craft tie"
+  },
+  "ritual-emulation": {
+    "price": 1700,
+    "stock": 40,
+    "name": "Emulation ritual"
+  },
+  "ritual-taylors": {
+    "price": 1400,
+    "stock": 30,
+    "name": "Taylor's Craft ritual"
+  },
+  "ritual-ra-en": {
+    "price": 1500,
+    "stock": 30,
+    "name": "Royal Arch ritual (English)"
+  },
+  "ritual-mark-en": {
+    "price": 800,
+    "stock": 30,
+    "name": "Mark ritual (English)"
+  },
+  "ritual-scottish": {
+    "price": 1700,
+    "stock": 25,
+    "name": "Scottish Craft ritual"
+  },
+  "book-laws": {
+    "price": 1500,
+    "stock": 30,
+    "name": "Laws and Constitutions (Ireland)"
+  },
+  "book-history-ie": {
+    "price": 2900,
+    "stock": 20,
+    "name": "A history of Irish Freemasonry"
+  },
+  "book-symbolism": {
+    "price": 2200,
+    "stock": 25,
+    "name": "Symbolism of the Craft"
+  },
+  "gift-tankard": {
+    "price": 4500,
+    "stock": 20,
+    "name": "Engraved pewter tankard"
+  }
+}

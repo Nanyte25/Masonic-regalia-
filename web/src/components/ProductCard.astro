@@ -1,6 +1,6 @@
 ---
 import { BODIES, type Product } from "../../../shared/catalog";
-import { artSvg } from "../lib/art";
+import { productVisual } from "../lib/art";
 import { formatMoney } from "../../../shared/pricing";
 interface Props { product: Product }
 const { product: p } = Astro.props;
@@ -10,7 +10,7 @@ const b = BODIES[p.body];
 <a class="card" href={`${base}product/${p.id}/`} style={`--mark:${b.colour};--mark-trim:${b.trim}`}
    data-product={p.id} data-body={p.body} data-kind={p.kind} data-rank={p.rank} data-constitution={p.constitution}
    data-price={p.price} data-name={p.name.toLowerCase()} data-search={`${p.name} ${p.summary} ${b.label} ${p.kind}`.toLowerCase()}>
-  <div class="art" set:html={artSvg(p.kind, p.body, p.rank, p.name, p.id)} />
+  <div class={p.image ? "art has-photo" : "art"} set:html={productVisual(p, base)} />
   <span class="order-mark">{p.body === "general" ? "All orders" : b.label}{p.constitution !== "any" && p.body !== "general" ? `, ${p.constitution === "ireland" ? "Irish" : p.constitution === "england" ? "English" : "Scottish"}` : ""}</span>
   <h3>{p.name}</h3>
   <span class="lead">{p.leadTimeDays ? `Made to order in about ${Math.ceil(p.leadTimeDays / 7)} weeks` : "In stock"}</span>

@@ -22,6 +22,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with: { node-version: 24 }
+      - run: node scripts/sync-catalog.mjs
       - run: npm ci
         working-directory: api
       - run: npx tsc --noEmit && npx vitest run
@@ -55,6 +56,8 @@ jobs:
       - if: steps.gate.outputs.run == 'true'
         run: npm ci
         working-directory: api
+      - if: steps.gate.outputs.run == 'true'
+        run: node scripts/sync-catalog.mjs
       - name: Create or find the D1 database
         if: steps.gate.outputs.run == 'true'
         working-directory: api
@@ -123,6 +126,7 @@ jobs:
         run: |
           export SITE="https://${OWNER,,}.github.io" BASE="/${REPO}/"
           echo "Site: $SITE$BASE  API: ${PUBLIC_API_URL:-not set}"
+          node ../scripts/sync-catalog.mjs
           npm ci && npx astro build
       # Works when Settings > Pages > Source = "GitHub Actions"
       - uses: actions/configure-pages@v5
@@ -162,6 +166,7 @@ jobs:
           BASE: /
           PUBLIC_API_URL: ${{ needs.api.outputs.url || vars.API_URL }}
         run: |
+          node ../scripts/sync-catalog.mjs
           npm ci && npx astro build
           npx wrangler@4 pages project create ashlar-regalia --production-branch main 2>/dev/null || true
           npx wrangler@4 pages deploy dist --project-name ashlar-regalia --branch main

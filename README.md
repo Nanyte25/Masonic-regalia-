@@ -49,6 +49,18 @@ docs/     design notes (agents.md: supplier automation plan)
 ### About Instagram sign-in
 Meta's Instagram login only works for Business and Creator accounts, and Meta doesn't approve it as a way for shoppers to sign in. Instagram users sign in with **Facebook**, which uses the same Meta account. The sign-in page says so.
 
+## Updating prices and photos (no code needed)
+
+You can do all of this from the GitHub website, including on your phone.
+
+- **Prices, stock and names:** edit `supplier/prices.csv`. Columns are `id, name, price_eur, stock, summary`; prices are in euro including VAT. Leave a cell blank to keep the current value. You can also replace the whole file with your supplier's sheet, as long as it uses the same column headings.
+- **Photos:** upload to `web/public/products/`, named by product ID (for example `ie-craft-mm-apron.jpg`). Use *Add file → Upload files*. Any product without a photo keeps its illustration.
+- Commit, and the site redeploys in about a minute. The build log reports how many products were updated and warns about any ID it doesn't recognise.
+
+Only use photos you own or that your supplier has given you permission to use. Don't copy them from other retailers' websites.
+
+Default prices are benchmarked against Irish and UK regalia retailers in October 2026. Check them against your suppliers' trade prices before launch.
+
 ## Monday demo checklist (about 30 minutes)
 
 The storefront deploys as soon as the repo is pushed. The API needs a free Cloudflare account and a Stripe test account.

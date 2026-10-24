@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "prebuild": "node ../scripts/sync-catalog.mjs"
   },
   "dependencies": {
     "astro": "^7.4.2"

@@ -77,9 +77,9 @@ import { CONSTITUTIONS, RANKS } from "../../../../shared/catalog";
   <script>
     import { productById } from "../../../../shared/catalog";
     import { formatMoney, type Currency } from "../../../../shared/pricing";
-    import { api, showMessage, url } from "../../lib/api";
+    import { api, BASE, showMessage, url } from "../../lib/api";
     import { getToken, setToken } from "../../lib/store";
-    import { artSvg } from "../../lib/art";
+    import { productVisual } from "../../lib/art";
 
     if (!getToken()) location.replace(url("account/signin/"));
 
@@ -138,7 +138,7 @@ import { CONSTITUTIONS, RANKS } from "../../../../shared/catalog";
         $("saved").innerHTML = items.length
           ? items.map((id: string) => {
               const p = productById.get(id);
-              return p ? `<a class="card" href="${url(`product/${p.id}/`)}"><div class="art">${artSvg(p.kind, p.body, p.rank, p.name)}</div><h3>${esc(p.name)}</h3></a>` : "";
+              return p ? `<a class="card" href="${url(`product/${p.id}/`)}"><div class="art">${productVisual(p, BASE)}</div><h3>${esc(p.name)}</h3></a>` : "";
             }).join("")
           : `<p>Nothing saved yet. Use "Save for later" on any product page.</p>`;
       });

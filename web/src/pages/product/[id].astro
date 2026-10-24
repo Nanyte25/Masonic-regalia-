@@ -3,7 +3,7 @@ import Base from "../../layouts/Base.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { BODIES, CONSTITUTIONS, KINDS, PRODUCTS, RANKS, productById } from "../../../../shared/catalog";
 import { formatMoney } from "../../../../shared/pricing";
-import { artSvg } from "../../lib/art";
+import { productVisual } from "../../lib/art";
 
 export function getStaticPaths() {
   return PRODUCTS.map((p) => ({ params: { id: p.id } }));
@@ -19,6 +19,7 @@ const jsonLd = {
   name: p.name,
   description: p.summary,
   offers: { "@type": "Offer", priceCurrency: "EUR", price: (p.price / 100).toFixed(2), availability: "https://schema.org/InStock" },
+  ...(p.image ? { image: new URL(base + p.image, Astro.site).toString() } : {}),
 };
 ---
 <Base title={p.name} description={p.summary}>
@@ -27,7 +28,7 @@ const jsonLd = {
     <a href={base}>Home</a> / <a href={`${base}${p.kind === "ritual" || p.kind === "book" ? "books/" : p.body === "general" ? "jewellery/" : `regalia/${p.body}/`}`}>{p.kind === "ritual" || p.kind === "book" ? "Books" : p.body === "general" ? "Jewellery and gifts" : b.label}</a>
   </div>
   <section class="wrap product" style={`--mark:${b.colour};--mark-trim:${b.trim}`}>
-    <div class="art" set:html={artSvg(p.kind, p.body, p.rank, p.name, p.id)} />
+    <div class={p.image ? "art has-photo" : "art"} set:html={productVisual(p, base, "large")} />
     <form class="buy" id="buy" data-id={p.id} data-price={p.price} novalidate>
       <span class="order-mark">{b.label}{p.constitution !== "any" ? `, ${CONSTITUTIONS[p.constitution]} Constitution` : ""}{p.rank !== "any" ? `, ${RANKS[p.rank]}` : ""}</span>
       <h1>{p.name}</h1>

@@ -36,7 +36,8 @@ import Base from "../../layouts/Base.astro";
   <script>
     import { productById } from "../../../../shared/catalog";
     import { formatMoney, REGIONS, toCharge } from "../../../../shared/pricing";
-    import { artSvg } from "../../lib/art";
+    import { productVisual } from "../../lib/art";
+    import { BASE } from "../../lib/api";
     import { cartSummary, getCart, getCurrency, getRegion, getToken, updateQty } from "../../lib/store";
     import { api, showMessage, url } from "../../lib/api";
 
@@ -56,7 +57,7 @@ import Base from "../../layouts/Base.astro";
         .map((l, i) => {
           const p = productById.get(cart[i].id)!;
           return `<tr>
-            <td class="thumb">${artSvg(p.kind, p.body, p.rank, "")}</td>
+            <td class="thumb">${productVisual(p, BASE, "thumb")}</td>
             <td><a href="${url(`product/${p.id}/`)}">${p.name}</a>
               ${l.description ? `<div class="small muted">${escapeHtml(l.description)}</div>` : ""}
               ${l.discountPct ? `<div class="small ok">${l.discountPct}% lodge discount applied</div>` : ""}
@@ -137,6 +138,12 @@ import Base from "../../layouts/Base.astro";
   }
   .lines :global(.thumb) {
     width: 72px;
+  }
+  .lines :global(.thumb img) {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border: 1px solid var(--line);
   }
   .lines :global(.thumb svg) {
     width: 64px;

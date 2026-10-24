@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { PRODUCTS } from "../../shared/catalog";
+import { PRODUCTS, productById } from "../../shared/catalog";
+const mm = productById.get("ie-craft-mm-apron")!.price;
+const jewel = productById.get("ie-craft-officer-jewel")!.price;
 import { bulkDiscount, priceCart, priceLine, toCharge } from "../../shared/pricing";
 import { formEncode, verifyStripeSignature } from "../src/stripe";
 import { hashPassword, verifyPassword } from "../src/auth";
@@ -15,13 +17,13 @@ describe("catalogue", () => {
 describe("pricing", () => {
   it("adds option and personalisation costs", () => {
     const l = priceLine({ id: "ie-craft-officer-jewel", qty: 1, options: { metal: "gilt" } });
-    expect(l.unit).toBe(3200 + 1200);
+    expect(l.unit).toBe(jewel + 1200);
     const a = priceLine({ id: "ie-craft-mm-apron", qty: 1, personal: { lodge: "Lodge 42" } });
-    expect(a.unit).toBe(4500 + 2000);
+    expect(a.unit).toBe(mm + 2000);
   });
 
   it("ignores blank personalisation and truncates long text", () => {
-    expect(priceLine({ id: "ie-craft-mm-apron", qty: 1, personal: { lodge: "  " } }).unit).toBe(4500);
+    expect(priceLine({ id: "ie-craft-mm-apron", qty: 1, personal: { lodge: "  " } }).unit).toBe(mm);
     expect(priceLine({ id: "ie-craft-mm-apron", qty: 1, personal: { lodge: "x".repeat(99) } }).personal.lodge.length).toBe(40);
   });
 
