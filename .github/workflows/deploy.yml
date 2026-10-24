@@ -71,10 +71,13 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         working-directory: api
         env:
-          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
           ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
+          SITE_URL_OVERRIDE: ${{ vars.SITE_URL }}
         run: |
-          out=$(npx wrangler deploy --var "SITE_URL:${SITE_URL,,}" --var "ADMIN_EMAILS:${ADMIN_EMAILS:-you@example.com}" 2>&1 | tee /dev/stderr)
+          SITE_URL="${SITE_URL_OVERRIDE:-https://${OWNER,,}.github.io/${REPO}}"
+          out=$(npx wrangler deploy --var "SITE_URL:${SITE_URL}" --var "ADMIN_EMAILS:${ADMIN_EMAILS:-you@example.com}" 2>&1 | tee /dev/stderr)
           url=$(echo "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Sync secrets
