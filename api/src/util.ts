@@ -1,7 +1,7 @@
 export interface Env {
   DB: D1Database;
   SITE_URL: string; // e.g. https://nanyte25.github.io/masonic-regalia
-  API_URL: string; // e.g. https://regalia-api.<you>.workers.dev
+  API_URL?: string; // optional; defaults to the Worker's own origin
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   GOOGLE_CLIENT_ID?: string;
@@ -13,6 +13,8 @@ export interface Env {
   RESEND_API_KEY?: string;
   MAIL_FROM?: string;
   SHOP_NOTIFY_EMAIL?: string;
+  AGENT_API_KEY?: string;
+  AGENT_PO_LIMIT_EUR?: string; // cents; POs above this need human approval
 }
 
 export class HttpError extends Error {

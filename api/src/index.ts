@@ -14,11 +14,13 @@ import {
   requireAdmin,
   requireUser,
   safeReturnTo,
+  setRequestOrigin,
   verifyPassword,
   type Provider,
   type User,
 } from "./auth";
 import { stripe, verifyStripeSignature } from "./stripe";
+import { agentRoutes, emit, ORDER_STATUSES } from "./agents";
 import { cors, EMAIL_RE, HttpError, id, json, randomToken, readJson, sendEmail, sha256, type Env } from "./util";
 
 type Handler = (req: Request, env: Env, params: Record<string, string>, ctx: ExecutionContext) => Promise<Response>;
@@ -153,13 +155,17 @@ route("POST", "/webhook", async (req, env) => {
       ...lines.map((l) => env.DB.prepare("INSERT INTO sold (product_id, qty) VALUES (?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = qty + excluded.qty").bind(l.id, l.qty)),
     ];
     await env.DB.batch(stmts);
+    await emit(env, "order.paid", order.id, { email, region: order.region, currency: order.currency, total: s.amount_total ?? order.total, lines, address });
     if (env.SHOP_NOTIFY_EMAIL)
       await sendEmail(env, env.SHOP_NOTIFY_EMAIL, `New order ${order.id}`, `${email}\n\n${lines.map((l) => `${l.qty} × ${l.name}`).join("\n")}\n\nLodge: ${address.lodge ?? "-"}`);
   } else if (event.type === "checkout.session.expired") {
     await env.DB.prepare("DELETE FROM orders WHERE stripe_session = ? AND status = 'pending'").bind(s.id).run();
   } else if (event.type === "charge.refunded") {
     const orderId = s.metadata?.order_id;
-    if (orderId) await env.DB.prepare("UPDATE orders SET status = 'refunded' WHERE id = ?").bind(orderId).run();
+    if (orderId) {
+      await env.DB.prepare("UPDATE orders SET status = 'refunded' WHERE id = ?").bind(orderId).run();
+      await emit(env, "order.status_changed", orderId, { status: "refunded", by: "stripe" });
+    }
   }
   return json({ received: true });
 });
@@ -180,6 +186,7 @@ route("POST", "/quotes", async (req, env) => {
   await env.DB.prepare("INSERT INTO quotes (id, user_id, name, email, lodge, details) VALUES (?, ?, ?, ?, ?, ?)")
     .bind(qid, user?.id ?? null, b.name.slice(0, 120), b.email.slice(0, 200), (b.lodge ?? "").slice(0, 200), b.details.slice(0, 4000))
     .run();
+  await emit(env, "quote.created", qid, { name: b.name, email: b.email, lodge: b.lodge ?? "", details: b.details });
   if (env.SHOP_NOTIFY_EMAIL) await sendEmail(env, env.SHOP_NOTIFY_EMAIL, `Lodge quote request from ${b.name}`, `${b.email}\n${b.lodge ?? ""}\n\n${b.details}`);
   return json({ id: qid }, 201);
 });
@@ -326,7 +333,6 @@ route("GET", "/me/quotes", async (req, env) => {
 });
 
 // ---------- admin ----------
-const ORDER_STATUSES = ["paid", "in_production", "shipped", "cancelled", "refunded"];
 
 route("GET", "/admin/orders", async (req, env) => {
   await requireAdmin(env, req);
@@ -343,6 +349,7 @@ route("PATCH", "/admin/orders/:oid", async (req, env, p) => {
   const b = await readJson<{ status?: string; tracking?: string }>(req);
   if (b.status && !ORDER_STATUSES.includes(b.status)) throw new HttpError(400, "Unknown status");
   await env.DB.prepare("UPDATE orders SET status = COALESCE(?, status), tracking = COALESCE(?, tracking) WHERE id = ?").bind(b.status ?? null, b.tracking ?? null, p.oid).run();
+  await emit(env, "order.status_changed", p.oid, { ...b, by: "admin" });
   const o = await env.DB.prepare("SELECT email, status, tracking FROM orders WHERE id = ?").bind(p.oid).first<any>();
   if (o?.email && b.status === "shipped") await sendEmail(env, o.email, `Your order ${p.oid} has shipped`, `Your regalia is on its way.${o.tracking ? `\n\nTracking: ${o.tracking}` : ""}`);
   return json({ ok: true });
@@ -362,20 +369,40 @@ route("PATCH", "/admin/quotes/:qid", async (req, env, p) => {
   return json({ ok: true });
 });
 
+route("GET", "/admin/purchase-orders", async (req, env) => {
+  await requireAdmin(env, req);
+  const { results } = await env.DB.prepare("SELECT po.*, s.name AS supplier FROM purchase_orders po JOIN suppliers s ON s.id = po.supplier_id ORDER BY po.created_at DESC LIMIT 200").all<any>();
+  return json({ purchase_orders: results.map((p) => ({ ...p, lines: JSON.parse(p.lines) })) });
+});
+
+route("POST", "/admin/purchase-orders/:pid/:decision", async (req, env, p) => {
+  const admin = await requireAdmin(env, req);
+  if (!["approve", "reject"].includes(p.decision)) throw new HttpError(404, "Not found");
+  const status = p.decision === "approve" ? "draft" : "cancelled";
+  const r = await env.DB.prepare("UPDATE purchase_orders SET status = ?, approved_by = ?, updated_at = datetime('now') WHERE id = ? AND status = 'awaiting_approval'").bind(status, admin.id, p.pid).run();
+  if (!r.meta.changes) throw new HttpError(409, "This purchase order isn't waiting for approval");
+  await emit(env, "po.updated", p.pid, { status, by: "admin" });
+  return json({ ok: true, status });
+});
+
 route("GET", "/admin/summary", async (req, env) => {
   await requireAdmin(env, req);
   const r = await env.DB.prepare(
-    "SELECT (SELECT COUNT(*) FROM orders WHERE status='paid') AS to_make, (SELECT COUNT(*) FROM orders WHERE status='in_production') AS in_production, (SELECT COUNT(*) FROM quotes WHERE status='new') AS new_quotes, (SELECT COUNT(*) FROM users) AS members",
+    "SELECT (SELECT COUNT(*) FROM orders WHERE status='paid') AS to_make, (SELECT COUNT(*) FROM orders WHERE status='in_production') AS in_production, (SELECT COUNT(*) FROM quotes WHERE status='new') AS new_quotes, (SELECT COUNT(*) FROM users) AS members, (SELECT COUNT(*) FROM purchase_orders WHERE status='awaiting_approval') AS po_approvals",
   ).first();
   return json(r);
 });
+
+for (const [m, pth, h] of agentRoutes) route(m, pth, (req, env, p) => h(req, env, p));
 
 // ---------- entry ----------
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const headers = cors(env, req);
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
-    const path = new URL(req.url).pathname;
+    const reqUrl = new URL(req.url);
+    const path = reqUrl.pathname;
+    setRequestOrigin(reqUrl.origin);
     try {
       for (const [method, re, h] of routes) {
         if (method !== req.method) continue;

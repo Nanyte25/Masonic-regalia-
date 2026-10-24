@@ -1,0 +1,128 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+        working-directory: api
+      - run: npx tsc --noEmit && npx vitest run
+        working-directory: api
+      - run: npm ci && npx astro build
+        working-directory: web
+
+  api:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Skip when Cloudflare is not configured
+        id: gate
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets to deploy the API."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.gate.outputs.run == 'true'
+        run: npm ci
+        working-directory: api
+      - name: Create or find the D1 database
+        if: steps.gate.outputs.run == 'true'
+        working-directory: api
+        run: |
+          id=$(npx wrangler d1 list --json | node -e 'const d=JSON.parse(require("fs").readFileSync(0));const r=d.find(x=>x.name==="regalia");process.stdout.write(r?r.uuid:"")')
+          if [ -z "$id" ]; then
+            npx wrangler d1 create regalia
+            id=$(npx wrangler d1 list --json | node -e 'const d=JSON.parse(require("fs").readFileSync(0));process.stdout.write(d.find(x=>x.name==="regalia").uuid)')
+          fi
+          sed -i "s/^database_id = .*/database_id = \"$id\"/" wrangler.toml
+          npx wrangler d1 migrations apply regalia --remote
+      - name: Deploy Worker
+        id: deploy
+        if: steps.gate.outputs.run == 'true'
+        working-directory: api
+        env:
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
+        run: |
+          out=$(npx wrangler deploy --var "SITE_URL:${SITE_URL,,}" --var "ADMIN_EMAILS:${ADMIN_EMAILS:-you@example.com}" 2>&1 | tee /dev/stderr)
+          url=$(echo "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Sync secrets
+        if: steps.gate.outputs.run == 'true'
+        working-directory: api
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          SHOP_NOTIFY_EMAIL: ${{ secrets.SHOP_NOTIFY_EMAIL }}
+          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+        run: |
+          node -e '
+            const keys=["STRIPE_SECRET_KEY","STRIPE_WEBHOOK_SECRET","GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","FACEBOOK_APP_ID","FACEBOOK_APP_SECRET","RESEND_API_KEY","MAIL_FROM","SHOP_NOTIFY_EMAIL","AGENT_API_KEY"];
+            const o={}; for (const k of keys) if (process.env[k]) o[k]=process.env[k];
+            require("fs").writeFileSync("/tmp/secrets.json", JSON.stringify(o));
+            console.log("Setting", Object.keys(o).join(", ") || "no secrets");'
+          [ "$(cat /tmp/secrets.json)" = "{}" ] || npx wrangler secret bulk /tmp/secrets.json
+          rm -f /tmp/secrets.json
+
+  web:
+    needs: [test, api]
+    if: always() && github.event_name != 'pull_request' && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - id: cfg
+        uses: actions/configure-pages@v5
+      - name: Build site
+        working-directory: web
+        env:
+          SITE: ${{ steps.cfg.outputs.origin }}
+          BASE: ${{ steps.cfg.outputs.base_path }}/
+          PUBLIC_API_URL: ${{ needs.api.outputs.url || vars.API_URL }}
+        run: |
+          echo "API: ${PUBLIC_API_URL:-not set}"
+          npm ci && npx astro build
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: web/dist }
+      - id: pages
+        uses: actions/deploy-pages@v4

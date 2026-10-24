@@ -109,8 +109,13 @@ export function enabledProviders(env: Env): Provider[] {
   return p;
 }
 
+// API_URL is optional: fall back to the origin the request arrived on.
+let requestOrigin = "";
+export function setRequestOrigin(o: string) {
+  requestOrigin = o;
+}
 function callbackUrl(env: Env, provider: Provider) {
-  return `${env.API_URL}/auth/oauth/${provider}/callback`;
+  return `${env.API_URL || requestOrigin}/auth/oauth/${provider}/callback`;
 }
 
 export function safeReturnTo(env: Env, value: string | null): string {

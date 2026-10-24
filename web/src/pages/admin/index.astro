@@ -13,6 +13,12 @@ import Base from "../../layouts/Base.astro";
         </select></label>
     </div>
     <div class="scroll"><table><thead><tr><th>Order</th><th>Customer</th><th>Items and personalisation</th><th>Deliver to</th><th>Total</th><th>Status</th></tr></thead><tbody id="orders"></tbody></table></div>
+    <h2 class="q">Supplier orders</h2>
+    <p class="small muted">Purchase orders raised by automation agents. Anything over the spending limit waits here for you.</p>
+    <div class="scroll"><table><thead><tr><th>PO</th><th>Supplier</th><th>Lines</th><th>Cost</th><th>For order</th><th>Status</th></tr></thead><tbody id="pos"></tbody></table></div>
+    <h2 class="q">Supplier orders</h2>
+    <p class="small muted">Purchase orders raised by automation agents. Anything over the spending limit waits here for you.</p>
+    <div class="scroll"><table><thead><tr><th>PO</th><th>Supplier</th><th>Lines</th><th>Cost</th><th>For order</th><th>Status</th></tr></thead><tbody id="pos"></tbody></table></div>
     <h2 class="q">Lodge quote requests</h2>
     <div class="scroll"><table><thead><tr><th>Date</th><th>From</th><th>Lodge</th><th>Request</th><th>Status</th></tr></thead><tbody id="quotes"></tbody></table></div>
     <p class="small muted">Refunds are issued in the Stripe dashboard. The order updates here automatically.</p>
@@ -54,12 +60,52 @@ import Base from "../../layouts/Base.astro";
     });
     $("filter").addEventListener("change", loadOrders);
 
+    async function loadPOs() {
+      const { purchase_orders } = await api("/admin/purchase-orders");
+      $("pos").innerHTML = purchase_orders.map((p: any) => `<tr>
+        <td>${esc(p.id)}<br><span class="small muted">${esc(p.created_at)}</span></td>
+        <td>${esc(p.supplier)}</td>
+        <td class="small">${p.lines.map((l: any) => `${l.qty} × ${esc(l.product_id)} @ ${formatMoney(l.unit_cost, "EUR")}`).join("<br>")}</td>
+        <td>${formatMoney(p.total_cost, "EUR")}</td>
+        <td>${esc(p.order_id ?? "Stock")}</td>
+        <td>${p.status === "awaiting_approval"
+          ? `<button class="btn" data-po="${esc(p.id)}" data-d="approve">Approve</button> <button class="btn ghost" data-po="${esc(p.id)}" data-d="reject">Reject</button>`
+          : esc(p.status.replace("_", " "))}</td></tr>`).join("") || `<tr><td colspan="6">No supplier orders yet.</td></tr>`;
+    }
+    $("pos").addEventListener("click", async (e) => {
+      const t = e.target as HTMLElement;
+      if (!t.dataset.po) return;
+      await api(`/admin/purchase-orders/${t.dataset.po}/${t.dataset.d}`, { method: "POST" });
+      loadPOs();
+    });
+
+    async function loadPOs() {
+      const { purchase_orders } = await api("/admin/purchase-orders");
+      $("pos").innerHTML = purchase_orders.map((p: any) => `<tr>
+        <td>${esc(p.id)}<br><span class="small muted">${esc(p.created_at)}</span></td>
+        <td>${esc(p.supplier)}</td>
+        <td class="small">${p.lines.map((l: any) => `${l.qty} × ${esc(l.product_id)} @ ${formatMoney(l.unit_cost, "EUR")}`).join("<br>")}</td>
+        <td>${formatMoney(p.total_cost, "EUR")}</td>
+        <td>${esc(p.order_id ?? "Stock")}</td>
+        <td>${p.status === "awaiting_approval"
+          ? `<button class="btn small" data-po="${esc(p.id)}" data-d="approve">Approve</button> <button class="btn ghost small" data-po="${esc(p.id)}" data-d="reject">Reject</button>`
+          : esc(p.status.replace("_", " "))}</td></tr>`).join("") || `<tr><td colspan="6">No supplier orders yet.</td></tr>`;
+    }
+    $("pos").addEventListener("click", async (e) => {
+      const t = e.target as HTMLElement;
+      if (!t.dataset.po) return;
+      await api(`/admin/purchase-orders/${t.dataset.po}/${t.dataset.d}`, { method: "POST" });
+      loadPOs();
+    });
+
     async function init() {
       try {
         const s = await api("/admin/summary");
         $("admin").hidden = false;
-        $("stats").innerHTML = [["To make", s.to_make], ["Being made", s.in_production], ["New quotes", s.new_quotes], ["Members", s.members]].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+        $("stats").innerHTML = [["To make", s.to_make], ["Being made", s.in_production], ["Supplier orders to approve", s.po_approvals], ["New quotes", s.new_quotes], ["Members", s.members]].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
         await loadOrders();
+        await loadPOs();
+        await loadPOs();
         const { quotes } = await api("/admin/quotes");
         $("quotes").innerHTML = quotes.map((q: any) => `<tr><td class="small">${esc(q.created_at)}</td><td>${esc(q.name)}<br><a href="mailto:${esc(q.email)}">${esc(q.email)}</a></td><td>${esc(q.lodge)}</td><td>${esc(q.details)}</td>
           <td><select data-q="${esc(q.id)}" aria-label="Quote status">${["new", "replied", "won", "lost"].map((v) => `<option ${v === q.status ? "selected" : ""}>${v}</option>`).join("")}</select></td></tr>`).join("") || `<tr><td colspan="5">No quote requests.</td></tr>`;
@@ -75,7 +121,7 @@ import Base from "../../layouts/Base.astro";
   </script>
 </Base>
 <style>
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin: 1.5rem 0 2.5rem; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin: 1.5rem 0 2.5rem; }
   .stats :global(div) { background: var(--white); padding: 1rem; }
   .stats :global(dt) { color: var(--muted); font-size: var(--t-sm); }
   .stats :global(dd) { margin: 0; font: var(--t-xl) var(--serif); }

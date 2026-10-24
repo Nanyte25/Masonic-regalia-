@@ -5,7 +5,7 @@ compatibility_date = "2025-09-01"
 [vars]
 # Change these to your real URLs after the first deploy.
 SITE_URL = "https://nanyte25.github.io/masonic-regalia"
-API_URL = "https://regalia-api.YOUR-SUBDOMAIN.workers.dev"
+# API_URL is optional; defaults to the Worker URL.
 FACEBOOK_GRAPH_VERSION = "v23.0"
 ADMIN_EMAILS = "you@example.com"
 
