@@ -1,0 +1,28 @@
+---
+import Base from "../../layouts/Base.astro";
+import { REGIONS } from "../../../../shared/pricing";
+import { formatMoney } from "../../../../shared/pricing";
+---
+<Base title="Delivery and returns">
+  <section class="section wrap prose">
+    <h1>Delivery and returns</h1>
+    <h2>Delivery</h2>
+    <table>
+      <thead><tr><th>Destination</th><th>Tracked delivery</th><th>Free over</th><th>Time after dispatch</th></tr></thead>
+      <tbody>
+        {Object.values(REGIONS).map((r) => (
+          <tr><td>{r.label}</td><td>{formatMoney(r.shipping, "EUR")}</td><td>{formatMoney(r.freeOver, "EUR")}</td><td>{r.days}</td></tr>
+        ))}
+      </tbody>
+    </table>
+    <p>In-stock items are dispatched within 2 working days. Made-to-order items show their lead time on the product page, and we send the whole order together.</p>
+    <h2>VAT and duties</h2>
+    <p>Prices for Ireland and the rest of the EU include Irish VAT at 23%. For the UK (including Northern Ireland) and the rest of the world, we remove Irish VAT at checkout. Import VAT or duty may be charged on arrival by your local customs.</p>
+    <h2>Returns</h2>
+    <ul>
+      <li>Unused, unpersonalised items can be returned within 30 days for a full refund. EU consumer law gives you at least 14 days to cancel.</li>
+      <li>Embroidered, engraved or made-to-order items are made for you and can't be returned unless they're faulty.</li>
+      <li>If something arrives damaged or wrong, email us with a photo within 14 days and we'll replace it at our cost.</li>
+    </ul>
+  </section>
+</Base>

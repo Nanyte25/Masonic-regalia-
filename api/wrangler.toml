@@ -1,0 +1,22 @@
+name = "regalia-api"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Change these to your real URLs after the first deploy.
+SITE_URL = "https://nanyte25.github.io/masonic-regalia"
+API_URL = "https://regalia-api.YOUR-SUBDOMAIN.workers.dev"
+FACEBOOK_GRAPH_VERSION = "v23.0"
+ADMIN_EMAILS = "you@example.com"
+
+# Secrets (set with `wrangler secret put NAME`):
+#   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET          (optional – enables Google sign-in)
+#   FACEBOOK_APP_ID, FACEBOOK_APP_SECRET            (optional – enables Facebook sign-in)
+#   RESEND_API_KEY, MAIL_FROM, SHOP_NOTIFY_EMAIL    (optional – emails)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "regalia"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+migrations_dir = "migrations"

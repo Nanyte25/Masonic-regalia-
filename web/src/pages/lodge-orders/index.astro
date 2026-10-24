@@ -1,0 +1,55 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="Lodge orders and quotes" description="Bulk pricing and made-to-order regalia, banners and jewels for lodges, chapters and preceptories.">
+  <section class="section wrap lodge">
+    <div class="prose">
+      <h1>Lodge orders and quotes</h1>
+      <p>Buying for a lodge, chapter, council or preceptory? Discounts on five or more of the same item come off in the basket automatically:</p>
+      <table>
+        <thead><tr><th>Quantity of one item</th><th>Discount</th></tr></thead>
+        <tbody><tr><td>1 to 4</td><td>None</td></tr><tr><td>5 to 9</td><td>5%</td></tr><tr><td>10 or more</td><td>10%</td></tr></tbody>
+      </table>
+      <h2>Ask us for a quote for</h2>
+      <ul>
+        <li>A full set of officers' collars and jewels</li>
+        <li>Lodge banners and warrant cases</li>
+        <li>Centenary, anniversary and charity jewels</li>
+        <li>Regalia for an Irish province overseas</li>
+        <li>Payment by invoice or bank transfer for the lodge account</li>
+      </ul>
+      <p>We reply within two working days.</p>
+    </div>
+    <form id="q" class="quote" novalidate>
+      <h2>Request a quote</h2>
+      <div class="field"><label for="name">Your name</label><input id="name" name="name" autocomplete="name" required /></div>
+      <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required /></div>
+      <div class="field"><label for="lodge">Lodge, chapter or body (name and number)</label><input id="lodge" name="lodge" /></div>
+      <div class="field"><label for="details">What do you need?</label><textarea id="details" name="details" rows="6" required placeholder="e.g. 12 officers' collars with silver jewels, Irish Constitution, needed by March"></textarea></div>
+      <div class="visually-hidden" aria-hidden="true"><label for="website">Leave blank</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
+      <button class="btn block" type="submit">Send request</button>
+      <p id="msg" class="notice" role="status"></p>
+    </form>
+  </section>
+  <script>
+    import { api, showMessage } from "../../lib/api";
+    const f = document.getElementById("q") as HTMLFormElement;
+    const msg = document.getElementById("msg");
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const d = Object.fromEntries(new FormData(f));
+      if (!d.name || !d.email || !d.details) return showMessage(msg, "Add your name, email and what your lodge needs.", "error");
+      try {
+        await api("/quotes", { method: "POST", json: d });
+        f.reset();
+        showMessage(msg, "Request sent. We'll reply within two working days.", "ok");
+      } catch (x) { showMessage(msg, (x as Error).message, "error"); }
+    });
+  </script>
+</Base>
+<style>
+  .lodge { display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: start; }
+  .quote { background: var(--white); border: 1px solid var(--line); border-top: 6px solid var(--navy); padding: 1.5rem; }
+  .prose table { max-width: 420px; margin-bottom: 1.5rem; }
+  @media (max-width: 860px) { .lodge { grid-template-columns: 1fr; } }
+</style>

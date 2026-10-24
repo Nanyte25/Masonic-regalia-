@@ -1,0 +1,19 @@
+---
+import Base from "../../../layouts/Base.astro";
+---
+<Base title="Signing you in">
+  <section class="section wrap"><p>Signing you in…</p></section>
+  <script>
+    import { setToken } from "../../../lib/store";
+    import { url } from "../../../lib/api";
+    const h = new URLSearchParams(location.hash.slice(1));
+    const token = h.get("token");
+    history.replaceState(null, "", location.pathname); // drop the token from the address bar
+    if (token) {
+      setToken(token);
+      const next = h.get("next");
+      const dest = next && new URL(next).origin === location.origin ? next : url("account/");
+      location.replace(h.get("new") === "1" && dest.endsWith("/account/") ? `${dest}?welcome=1` : dest);
+    } else location.replace(url("account/signin/"));
+  </script>
+</Base>

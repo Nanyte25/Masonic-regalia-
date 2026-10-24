@@ -1,0 +1,88 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="Shop admin">
+  <section class="section wrap" id="admin" hidden>
+    <h1>Shop admin</h1>
+    <dl class="stats" id="stats"></dl>
+    <div class="bar">
+      <h2>Orders</h2>
+      <label><span class="visually-hidden">Show</span>
+        <select id="filter" aria-label="Show orders">
+          <option value="">All orders</option><option value="paid">To make</option><option value="in_production">Being made</option><option value="shipped">Shipped</option><option value="refunded">Refunded</option>
+        </select></label>
+    </div>
+    <div class="scroll"><table><thead><tr><th>Order</th><th>Customer</th><th>Items and personalisation</th><th>Deliver to</th><th>Total</th><th>Status</th></tr></thead><tbody id="orders"></tbody></table></div>
+    <h2 class="q">Lodge quote requests</h2>
+    <div class="scroll"><table><thead><tr><th>Date</th><th>From</th><th>Lodge</th><th>Request</th><th>Status</th></tr></thead><tbody id="quotes"></tbody></table></div>
+    <p class="small muted">Refunds are issued in the Stripe dashboard. The order updates here automatically.</p>
+  </section>
+  <section class="section wrap" id="denied" hidden><p>This page is for shop staff. <a href="../account/signin/">Sign in</a> with an admin account.</p></section>
+  <script>
+    import { formatMoney, type Currency } from "../../../../shared/pricing";
+    import { api } from "../../lib/api";
+    const $ = (id: string) => document.getElementById(id)!;
+    const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    const STATUSES = [["paid", "To make"], ["in_production", "Being made"], ["shipped", "Shipped"], ["cancelled", "Cancelled"], ["refunded", "Refunded"]];
+
+    async function loadOrders() {
+      const status = ($("filter") as HTMLSelectElement).value;
+      const { orders } = await api(`/admin/orders${status ? `?status=${status}` : ""}`);
+      $("orders").innerHTML = orders.map((o: any) => {
+        const a = o.shipping_address?.address ?? {};
+        return `<tr data-id="${esc(o.id)}">
+          <td>${esc(o.id)}<br><span class="small muted">${esc(o.created_at)}</span></td>
+          <td>${esc(o.shipping_address?.name)}<br><span class="small">${esc(o.email)}</span><br><span class="small">${esc(o.shipping_address?.phone)}</span>${o.shipping_address?.lodge ? `<br><span class="small">Lodge: ${esc(o.shipping_address.lodge)}</span>` : ""}</td>
+          <td>${o.lines.map((l: any) => `<strong>${l.qty} × ${esc(l.name)}</strong>${l.description ? `<br><span class="small">${esc(l.description)}</span>` : ""}`).join("<br>")}</td>
+          <td class="small">${[a.line1, a.line2, a.city, a.state, a.postal_code, a.country].filter(Boolean).map(esc).join("<br>")}</td>
+          <td>${formatMoney(o.total, o.currency as Currency)}</td>
+          <td><select data-status aria-label="Status for ${esc(o.id)}">${STATUSES.map(([v, l]) => `<option value="${v}" ${v === o.status ? "selected" : ""}>${l}</option>`).join("")}</select>
+              <input data-tracking placeholder="Tracking no." value="${esc(o.tracking ?? "")}" aria-label="Tracking number">
+              <button class="btn ghost small" data-save>Save</button></td></tr>`;
+      }).join("") || `<tr><td colspan="6">No orders in this view.</td></tr>`;
+    }
+    $("orders").addEventListener("click", async (e) => {
+      const t = e.target as HTMLElement;
+      if (!t.hasAttribute("data-save")) return;
+      const row = t.closest("tr")!;
+      t.textContent = "Saving…";
+      await api(`/admin/orders/${row.dataset.id}`, { method: "PATCH", json: {
+        status: row.querySelector<HTMLSelectElement>("[data-status]")!.value,
+        tracking: row.querySelector<HTMLInputElement>("[data-tracking]")!.value || undefined,
+      } });
+      t.textContent = "Saved";
+    });
+    $("filter").addEventListener("change", loadOrders);
+
+    async function init() {
+      try {
+        const s = await api("/admin/summary");
+        $("admin").hidden = false;
+        $("stats").innerHTML = [["To make", s.to_make], ["Being made", s.in_production], ["New quotes", s.new_quotes], ["Members", s.members]].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+        await loadOrders();
+        const { quotes } = await api("/admin/quotes");
+        $("quotes").innerHTML = quotes.map((q: any) => `<tr><td class="small">${esc(q.created_at)}</td><td>${esc(q.name)}<br><a href="mailto:${esc(q.email)}">${esc(q.email)}</a></td><td>${esc(q.lodge)}</td><td>${esc(q.details)}</td>
+          <td><select data-q="${esc(q.id)}" aria-label="Quote status">${["new", "replied", "won", "lost"].map((v) => `<option ${v === q.status ? "selected" : ""}>${v}</option>`).join("")}</select></td></tr>`).join("") || `<tr><td colspan="5">No quote requests.</td></tr>`;
+        $("quotes").addEventListener("change", (e) => {
+          const t = e.target as HTMLSelectElement;
+          api(`/admin/quotes/${t.dataset.q}`, { method: "PATCH", json: { status: t.value } });
+        });
+      } catch {
+        $("denied").hidden = false;
+      }
+    }
+    init();
+  </script>
+</Base>
+<style>
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin: 1.5rem 0 2.5rem; }
+  .stats :global(div) { background: var(--white); padding: 1rem; }
+  .stats :global(dt) { color: var(--muted); font-size: var(--t-sm); }
+  .stats :global(dd) { margin: 0; font: var(--t-xl) var(--serif); }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .scroll { overflow-x: auto; background: var(--white); border: 1px solid var(--line); }
+  .scroll :global(select), .scroll :global(input) { min-height: 36px; margin-bottom: .3rem; min-width: 140px; }
+  .scroll :global(.btn) { min-height: 34px; padding: .3rem .8rem; }
+  .q { margin-top: 3rem; }
+  @media (max-width: 700px) { .stats { grid-template-columns: 1fr 1fr; } }
+</style>

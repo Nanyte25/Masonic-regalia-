@@ -1,0 +1,33 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="Thank you for your order">
+  <section class="section wrap narrow-page">
+    <h1>Thank you. Your order is in.</h1>
+    <p id="status">We've received your payment. Stripe will email your receipt.</p>
+    <div id="detail"></div>
+    <p>Questions about embroidery or delivery? Reply to your receipt email and quote your order number.</p>
+    <p><a class="btn" href="../account/" id="acct">View your orders</a> <a class="btn ghost" href="../">Continue shopping</a></p>
+  </section>
+  <script>
+    import { api, url } from "../../lib/api";
+    import { clearCart, getToken } from "../../lib/store";
+    import { formatMoney, type Currency } from "../../../../shared/pricing";
+    const sid = new URLSearchParams(location.search).get("session_id");
+    clearCart();
+    if (!getToken()) {
+      const a = document.getElementById("acct") as HTMLAnchorElement;
+      a.textContent = "Create an account to track it";
+      a.href = url("account/register/");
+    }
+    const esc = (s: string) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    if (sid) {
+      api(`/orders/session/${encodeURIComponent(sid)}`).then((o) => {
+        const lead = Math.max(0, ...o.lines.map((l: any) => l.leadTimeDays ?? 0));
+        document.getElementById("status")!.textContent = `Order ${o.id}. ${lead ? `Made-to-order items take about ${Math.ceil(lead / 7)} weeks; we'll email when it ships.` : "We'll dispatch within 2 working days and email tracking."}`;
+        document.getElementById("detail")!.innerHTML = `<table><tbody>${o.lines.map((l: any) => `<tr><td>${l.qty} × ${esc(l.name)}${l.description ? `<br><span class="small muted">${esc(l.description)}</span>` : ""}</td></tr>`).join("")}<tr><td><strong>Total ${formatMoney(o.total, o.currency as Currency)}</strong></td></tr></tbody></table>`;
+      }).catch(() => {});
+    }
+  </script>
+</Base>
+<style>.narrow-page { max-width: 720px; } #detail { margin: 1.5rem 0; }</style>

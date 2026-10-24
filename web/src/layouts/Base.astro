@@ -1,0 +1,381 @@
+---
+import "../styles/global.css";
+import { SITE } from "../site";
+import { REGIONS } from "../../../shared/pricing";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+const { title, description = SITE.tagline } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const u = (p: string) => base + p;
+const fullTitle = title ? `${title} | ${SITE.name}` : `${SITE.name}: Masonic regalia for Ireland and beyond`;
+const path = Astro.url.pathname;
+const nav = [
+  ["Craft", "regalia/craft/"],
+  ["Royal Arch", "regalia/royal-arch/"],
+  ["Other orders", "regalia/"],
+  ["Jewellery", "jewellery/"],
+  ["Books", "books/"],
+  ["Lodge orders", "lodge-orders/"],
+];
+---
+<!doctype html>
+<html lang="en-IE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta name="theme-color" content="#14284B" />
+    <link rel="icon" href={u("favicon.svg")} type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="strip">
+      <div class="wrap strip-inner">
+        <span>Free tracked delivery in Ireland over €100</span>
+        <label class="region">
+          <span class="visually-hidden">Deliver to</span>
+          <select id="region-select" aria-label="Deliver to">
+            {Object.entries(REGIONS).map(([k, r]) => <option value={k}>Deliver to {r.label}</option>)}
+          </select>
+        </label>
+        <label class="region">
+          <span class="visually-hidden">Currency</span>
+          <select id="currency-select" aria-label="Currency">
+            <option value="EUR">€ EUR</option>
+            <option value="GBP">£ GBP</option>
+            <option value="USD">$ USD</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href={base} aria-label={`${SITE.name} home`}>
+          <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="5" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M20 10 L11 30 M20 10 L29 30 M10 24 h20" stroke="currentColor" stroke-width="2.5" fill="none"/></svg>
+          <span>{SITE.name}</span>
+        </a>
+        <nav class="desk-nav" aria-label="Main">
+          <ul>
+            {nav.map(([label, href]) => (
+              <li><a href={u(href)} aria-current={(href === "regalia/" ? path === u(href) : path.startsWith(u(href))) ? "page" : undefined}>{label}</a></li>
+            ))}
+          </ul>
+        </nav>
+        <nav class="main-nav" aria-label="Main menu">
+          <details class="menu">
+            <summary>Menu</summary>
+            <ul>
+              {nav.map(([label, href]) => (
+                <li><a href={u(href)} aria-current={(href === "regalia/" ? path === u(href) : path.startsWith(u(href))) ? "page" : undefined}>{label}</a></li>
+              ))}
+              <li class="only-mobile"><a href={u("shop/")}>Search all products</a></li>
+            </ul>
+          </details>
+        </nav>
+        <div class="header-actions">
+          <a href={u("shop/")} class="icon-link" aria-label="Search the shop">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2"/></svg>
+          </a>
+          <a href={u("account/")} class="icon-link" id="account-link" aria-label="Your account">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span class="account-label">Sign in</span>
+          </a>
+          <a href={u("basket/")} class="icon-link basket" aria-label="Basket">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.5 12h-13z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span class="count" data-cart-count hidden>0</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-grid">
+        <div>
+          <p class="brand-foot">{SITE.name}</p>
+          <p class="small">{SITE.tagline}</p>
+          <p class="small">{SITE.address}<br />{SITE.email}</p>
+        </div>
+        <div>
+          <h3>Shop</h3>
+          <ul>
+            <li><a href={u("regalia/")}>Regalia by order</a></li>
+            <li><a href={u("jewellery/")}>Jewellery</a></li>
+            <li><a href={u("books/")}>Books and rituals</a></li>
+            <li><a href={u("shop/")}>All products</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Help</h3>
+          <ul>
+            <li><a href={u("guides/")}>Regalia and sizing guide</a></li>
+            <li><a href={u("delivery/")}>Delivery and returns</a></li>
+            <li><a href={u("lodge-orders/")}>Lodge orders and quotes</a></li>
+            <li><a href={u("about/")}>About us</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Account</h3>
+          <ul>
+            <li><a href={u("account/")}>Your account</a></li>
+            <li><a href={u("account/register/")}>Register</a></li>
+            <li><a href={u("privacy/")}>Privacy</a></li>
+            <li><a href={u("terms/")}>Terms of sale</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="wrap small legal">
+        Card payments are processed securely by Stripe. We never see or store your card details.
+        Prices for Ireland and the EU include VAT at 23%.
+      </div>
+    </footer>
+
+    <script>
+      import { getCurrency, getRegion, getToken, renderPrices, setCurrency, setRegion } from "../lib/store";
+      import type { Currency, Region } from "../../../shared/pricing";
+      const rs = document.getElementById("region-select") as HTMLSelectElement;
+      const cs = document.getElementById("currency-select") as HTMLSelectElement;
+      const sync = () => {
+        rs.value = getRegion();
+        cs.value = getCurrency();
+        const label = document.querySelector(".account-label");
+        if (label) label.textContent = getToken() ? "Account" : "Sign in";
+      };
+      rs.addEventListener("change", () => setRegion(rs.value as Region));
+      cs.addEventListener("change", () => setCurrency(cs.value as Currency));
+      window.addEventListener("store:change", sync);
+      sync();
+      renderPrices();
+    </script>
+  </body>
+</html>
+
+<style>
+  .strip {
+    background: var(--navy);
+    color: #dfe6f0;
+    font-size: var(--t-sm);
+  }
+  .strip-inner {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    min-height: 40px;
+  }
+  .strip-inner > span {
+    margin-right: auto;
+  }
+  .region select {
+    min-height: 32px;
+    padding: 0.2rem 0.4rem;
+    background: transparent;
+    color: #fff;
+    border: 1px solid #3d557f;
+    font-size: var(--t-sm);
+  }
+  .region select option {
+    color: var(--ink);
+  }
+  .site-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 68px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--navy);
+    text-decoration: none;
+    font: 400 1.35rem/1 var(--serif);
+  }
+  .brand svg {
+    width: 34px;
+    height: 34px;
+  }
+  .desk-nav {
+    flex: 1;
+  }
+  .desk-nav ul {
+    display: flex;
+    gap: 1.4rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .desk-nav a,
+  .menu a {
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 500;
+    padding-block: 0.4rem;
+    border-bottom: 2px solid transparent;
+  }
+  .desk-nav a:hover,
+  .desk-nav a[aria-current="page"] {
+    border-color: var(--craft);
+  }
+  .main-nav {
+    display: none;
+  }
+  .header-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .icon-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--ink);
+    text-decoration: none;
+    min-height: 44px;
+    position: relative;
+    font-weight: 500;
+  }
+  .icon-link svg {
+    width: 24px;
+    height: 24px;
+  }
+  .basket .count {
+    position: absolute;
+    top: 4px;
+    right: -10px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--crimson);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    padding: 0 4px;
+  }
+  .basket .count[hidden] {
+    display: none;
+  }
+  .site-footer {
+    background: var(--navy);
+    color: #dfe6f0;
+    padding-block: 3rem 1.5rem;
+    margin-top: 4rem;
+  }
+  .site-footer a {
+    color: #fff;
+    text-decoration: none;
+  }
+  .site-footer a:hover {
+    text-decoration: underline;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 2rem;
+  }
+  .footer-grid h3 {
+    font-size: 1rem;
+    color: #fff;
+  }
+  .footer-grid ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    line-height: 2;
+  }
+  .brand-foot {
+    font: 1.35rem var(--serif);
+    color: #fff;
+  }
+  .legal {
+    border-top: 1px solid #2c4470;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    color: #aebbd0;
+  }
+
+  @media (max-width: 900px) {
+    .header-inner {
+      gap: 0.75rem;
+    }
+    .desk-nav {
+      display: none;
+    }
+    .main-nav {
+      display: block;
+      order: 3;
+    }
+    .header-actions {
+      margin-left: auto;
+    }
+    .menu summary {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      cursor: pointer;
+      font-weight: 600;
+      list-style: none;
+    }
+    .menu summary::-webkit-details-marker {
+      display: none;
+    }
+    .menu ul {
+      list-style: none;
+      margin: 0;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      flex-direction: column;
+      gap: 0;
+      background: var(--white);
+      border-bottom: 1px solid var(--line);
+      padding: 0.5rem var(--gap) 1rem;
+    }
+    .menu a {
+      display: block;
+      padding: 0.7rem 0;
+    }
+    .account-label {
+      display: none;
+    }
+    .strip-inner > span {
+      display: none;
+    }
+    .strip-inner {
+      justify-content: flex-end;
+    }
+    .region:first-of-type {
+      flex: 1;
+      min-width: 0;
+    }
+    .region select {
+      width: 100%;
+    }
+    .region:last-of-type {
+      flex: 0 0 96px;
+    }
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

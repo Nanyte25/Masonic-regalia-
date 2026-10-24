@@ -1,0 +1,50 @@
+---
+import Base from "../../layouts/Base.astro";
+import { BODIES } from "../../../../shared/catalog";
+---
+<Base title="Regalia and sizing guide" description="How to choose the right regalia for your constitution, order and rank, plus glove and ring sizes.">
+  <section class="section wrap prose">
+    <h1>Regalia and sizing guide</h1>
+    <p>Regalia differs between the Irish, English and Scottish Constitutions, and between orders. If you're unsure, ask your lodge Secretary or Director of Ceremonies before ordering, or email us your lodge number and rank.</p>
+
+    <h2>Colours by order</h2>
+    <p>Throughout the shop, a coloured band marks which order an item belongs to.</p>
+    <table>
+      <tbody>
+        {Object.entries(BODIES).filter(([k]) => k !== "general").map(([, b]) => (
+          <tr><td><span class="order-mark" style={`--mark:${b.colour};--mark-trim:${b.trim}`}>{b.label}</span></td><td>{b.note}</td></tr>
+        ))}
+      </tbody>
+    </table>
+
+    <h2>Irish Constitution: jewels</h2>
+    <ul>
+      <li>Lodge officers wear silver jewels.</li>
+      <li>Grand and Provincial Grand Officers, current and past, are entitled to gold (gilt) jewels.</li>
+      <li>Irish lodges make no provision for jewels for Past Officers of lodges.</li>
+    </ul>
+    <p>Check the Laws and Constitutions of the Grand Lodge of Ireland for the full rules on clothing and insignia.</p>
+
+    <h2>Choosing an apron</h2>
+    <ul>
+      <li><strong>Entered Apprentice and Fellow Craft</strong>: usually supplied by the lodge at the degree.</li>
+      <li><strong>Master Mason</strong>: your own apron, often with lodge number embroidery.</li>
+      <li><strong>Worshipful Master and Past Master</strong>: buy in good time before installation. These are made to order.</li>
+      <li><strong>Provincial and Grand rank</strong>: made to order for your Province. Allow 4 to 6 weeks.</li>
+    </ul>
+
+    <h2 id="sizes">Glove and gauntlet sizes</h2>
+    <table>
+      <thead><tr><th>Size</th><th>Hand circumference</th></tr></thead>
+      <tbody><tr><td>S</td><td>18 to 19 cm</td></tr><tr><td>M</td><td>20 to 21 cm</td></tr><tr><td>L</td><td>22 to 23 cm</td></tr><tr><td>XL</td><td>24 to 25 cm</td></tr><tr><td>XXL</td><td>26 to 27 cm</td></tr></tbody>
+    </table>
+    <p>Measure around your palm just below the knuckles, excluding the thumb.</p>
+
+    <h2>Ring sizes</h2>
+    <p>Rings use Irish and UK letter sizes (P to Z). Wrap a strip of paper around the finger you'll wear the ring on, mark where it meets, and measure the length:</p>
+    <table>
+      <thead><tr><th>Size</th><th>Circumference</th></tr></thead>
+      <tbody><tr><td>P</td><td>56.0 mm</td></tr><tr><td>R</td><td>58.5 mm</td></tr><tr><td>T</td><td>61.0 mm</td></tr><tr><td>V</td><td>63.5 mm</td></tr><tr><td>X</td><td>66.0 mm</td></tr><tr><td>Z</td><td>68.5 mm</td></tr></tbody>
+    </table>
+  </section>
+</Base>

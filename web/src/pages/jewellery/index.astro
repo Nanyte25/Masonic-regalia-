@@ -1,0 +1,13 @@
+---
+import Base from "../../layouts/Base.astro";
+import Catalogue from "../../components/Catalogue.astro";
+import { PRODUCTS } from "../../../../shared/catalog";
+const items = PRODUCTS.filter((p) => ["ring", "cufflinks", "pin", "tie", "gift"].includes(p.kind));
+---
+<Base title="Masonic jewellery and gifts" description="Hallmarked rings, cufflinks, lapel pins, ties and engraved gifts.">
+  <section class="section wrap">
+    <h1>Jewellery and gifts</h1>
+    <p class="muted">Rings are made to your size in sterling silver or 9ct gold. Most pieces can be engraved for an initiation, raising or installation.</p>
+    <Catalogue products={items} facets={["kind", "body"]} />
+  </section>
+</Base>

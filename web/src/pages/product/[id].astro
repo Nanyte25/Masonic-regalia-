@@ -1,0 +1,260 @@
+---
+import Base from "../../layouts/Base.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import { BODIES, CONSTITUTIONS, KINDS, PRODUCTS, RANKS, productById } from "../../../../shared/catalog";
+import { formatMoney } from "../../../../shared/pricing";
+import { artSvg } from "../../lib/art";
+
+export function getStaticPaths() {
+  return PRODUCTS.map((p) => ({ params: { id: p.id } }));
+}
+const p = productById.get(Astro.params.id!)!;
+const b = BODIES[p.body];
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const needsConfirm = p.constitution !== "any" && ["apron", "collar", "jewel", "gauntlets", "set"].includes(p.kind);
+const related = PRODUCTS.filter((x) => x.id !== p.id && x.body === p.body && x.constitution === p.constitution).slice(0, 4);
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: p.name,
+  description: p.summary,
+  offers: { "@type": "Offer", priceCurrency: "EUR", price: (p.price / 100).toFixed(2), availability: "https://schema.org/InStock" },
+};
+---
+<Base title={p.name} description={p.summary}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <div class="wrap crumbs small">
+    <a href={base}>Home</a> / <a href={`${base}${p.kind === "ritual" || p.kind === "book" ? "books/" : p.body === "general" ? "jewellery/" : `regalia/${p.body}/`}`}>{p.kind === "ritual" || p.kind === "book" ? "Books" : p.body === "general" ? "Jewellery and gifts" : b.label}</a>
+  </div>
+  <section class="wrap product" style={`--mark:${b.colour};--mark-trim:${b.trim}`}>
+    <div class="art" set:html={artSvg(p.kind, p.body, p.rank, p.name, p.id)} />
+    <form class="buy" id="buy" data-id={p.id} data-price={p.price} novalidate>
+      <span class="order-mark">{b.label}{p.constitution !== "any" ? `, ${CONSTITUTIONS[p.constitution]} Constitution` : ""}{p.rank !== "any" ? `, ${RANKS[p.rank]}` : ""}</span>
+      <h1>{p.name}</h1>
+      <p class="summary">{p.summary}</p>
+      <p class="price"><span id="price" data-eur={p.price}>{formatMoney(p.price, "EUR")}</span> <span class="muted small" data-vat-note>incl. VAT</span></p>
+      <p class="stock small" id="stock">{p.leadTimeDays ? `Made to order. Dispatched in about ${Math.ceil(p.leadTimeDays / 7)} weeks.` : "In stock. Dispatched within 2 working days."}</p>
+
+      {p.options?.map((o) => (
+        <div class="field">
+          <label for={`opt-${o.id}`}>{o.label}</label>
+          <select id={`opt-${o.id}`} name={`opt:${o.id}`}>
+            {o.values.map((v) => <option value={v.id} data-delta={v.priceDelta}>{v.label}{v.priceDelta ? ` (+${formatMoney(v.priceDelta, "EUR")})` : ""}</option>)}
+          </select>
+          {o.id === "size" && <p class="hint"><a href={`${base}guides/#sizes`}>Size guide</a></p>}
+        </div>
+      ))}
+
+      {p.personalise?.map((x) => (
+        <div class="field personal">
+          <label for={`p-${x.id}`}>{x.label}{x.price ? <span class="muted"> (+<span data-eur={x.price}>{formatMoney(x.price, "EUR")}</span>)</span> : <span class="muted"> (included)</span>}</label>
+          <input id={`p-${x.id}`} name={`p:${x.id}`} maxlength={x.maxLength} data-price={x.price} placeholder={x.hint} autocomplete="off" />
+          <p class="hint">Optional. We check every embroidery and engraving request before work starts.</p>
+        </div>
+      ))}
+
+      <div class="qty-row">
+        <div class="field qty">
+          <label for="qty">Quantity</label>
+          <input id="qty" name="qty" type="number" inputmode="numeric" min="1" max="100" value="1" />
+        </div>
+        <p class="small muted bulk">5% off 5 or more, 10% off 10 or more.</p>
+      </div>
+
+      {needsConfirm && (
+        <label class="check confirm">
+          <input type="checkbox" name="confirm" id="confirm" required />
+          <span>This is {CONSTITUTIONS[p.constitution]} Constitution regalia. I've checked it's the right pattern for my {p.body === "craft" ? "lodge" : "body"}.</span>
+        </label>
+      )}
+
+      <div class="actions">
+        <button class="btn" type="submit" id="add">Add to basket</button>
+        <button class="btn ghost" type="button" id="wish" hidden>Save for later</button>
+      </div>
+      <p id="msg" class="notice" role="status"></p>
+
+      <h2 class="h-details">Details</h2>
+      <ul class="details">
+        {p.details.map((d) => <li>{d}</li>)}
+        <li>{KINDS[p.kind]}, {p.constitution === "any" ? "suitable for all constitutions" : `${CONSTITUTIONS[p.constitution]} Constitution`}</li>
+      </ul>
+      <p class="small muted">Not sure this is right? <a href={`${base}guides/`}>Read the regalia guide</a> or email us your lodge number and rank.</p>
+    </form>
+  </section>
+
+  {related.length > 0 && (
+    <section class="section wrap">
+      <h2>Also for {b.label.toLowerCase()}</h2>
+      <div class="grid">{related.map((r) => <ProductCard product={r} />)}</div>
+    </section>
+  )}
+
+  <script>
+    import { addToCart, getToken, money, renderPrices } from "../../lib/store";
+    import { api, url } from "../../lib/api";
+    const form = document.getElementById("buy") as HTMLFormElement;
+    const id = form.dataset.id!;
+    const basePrice = Number(form.dataset.price);
+    const priceEl = document.getElementById("price")!;
+    const msg = document.getElementById("msg")!;
+    const qtyEl = form.querySelector<HTMLInputElement>("#qty")!;
+
+    function current() {
+      let unit = basePrice;
+      const options: Record<string, string> = {};
+      const personal: Record<string, string> = {};
+      form.querySelectorAll<HTMLSelectElement>("select[name^='opt:']").forEach((s) => {
+        options[s.name.slice(4)] = s.value;
+        unit += Number(s.selectedOptions[0].dataset.delta ?? 0);
+      });
+      form.querySelectorAll<HTMLInputElement>("input[name^='p:']").forEach((i) => {
+        if (i.value.trim()) {
+          personal[i.name.slice(2)] = i.value.trim();
+          unit += Number(i.dataset.price ?? 0);
+        }
+      });
+      const qty = Math.max(1, Math.min(100, Math.floor(Number(qtyEl.value) || 1)));
+      return { unit, qty, options, personal };
+    }
+    function update() {
+      const { unit } = current();
+      priceEl.dataset.eur = String(unit);
+      priceEl.textContent = money(unit);
+    }
+    form.addEventListener("input", update);
+    window.addEventListener("store:change", update);
+    update();
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const confirm = form.querySelector<HTMLInputElement>("#confirm");
+      if (confirm && !confirm.checked) {
+        msg.className = "notice error";
+        msg.textContent = "Tick the box to confirm the constitution before adding this to your basket.";
+        confirm.focus();
+        return;
+      }
+      const { qty, options, personal } = current();
+      addToCart({ id, qty, options, personal });
+      msg.className = "notice ok";
+      msg.innerHTML = `Added to your basket. <a href="${url("basket/")}">View basket</a>`;
+    });
+
+    // Live stock from the API for ready-stock items.
+    if (!document.getElementById("stock")!.textContent!.startsWith("Made")) {
+      api<{ stock: Record<string, number> }>("/stock")
+        .then(({ stock }) => {
+          const n = stock[id];
+          const el = document.getElementById("stock")!;
+          if (n === 0) {
+            el.textContent = "Out of stock. Email us to reserve the next batch.";
+            (document.getElementById("add") as HTMLButtonElement).disabled = true;
+          } else if (n <= 5) el.textContent = `Only ${n} left. Dispatched within 2 working days.`;
+        })
+        .catch(() => {});
+    }
+
+    // Wishlist for signed-in members.
+    const wish = document.getElementById("wish") as HTMLButtonElement;
+    if (getToken()) {
+      wish.hidden = false;
+      let saved = false;
+      api<{ items: string[] }>("/me/wishlist").then(({ items }) => {
+        saved = items.includes(id);
+        wish.textContent = saved ? "Saved" : "Save for later";
+        wish.setAttribute("aria-pressed", String(saved));
+      }).catch(() => (wish.hidden = true));
+      wish.addEventListener("click", async () => {
+        saved = !saved;
+        wish.textContent = saved ? "Saved" : "Save for later";
+        wish.setAttribute("aria-pressed", String(saved));
+        await api(`/me/wishlist/${id}`, { method: saved ? "PUT" : "DELETE" }).catch(() => {});
+      });
+    }
+    renderPrices();
+  </script>
+</Base>
+
+<style>
+  .crumbs {
+    padding-block: 1.25rem 0.5rem;
+    color: var(--muted);
+  }
+  .crumbs a {
+    color: var(--muted);
+  }
+  .product {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: clamp(1.5rem, 5vw, 4rem);
+    align-items: start;
+    padding-bottom: 2rem;
+  }
+  .art {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-bottom: 6px solid var(--mark);
+    padding: 12%;
+    position: sticky;
+    top: 90px;
+  }
+  .product h1 {
+    font-size: var(--t-2xl);
+    margin-top: 0.4rem;
+  }
+  .summary {
+    font-size: var(--t-md);
+  }
+  .price {
+    font-size: var(--t-lg);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .stock {
+    color: var(--ok);
+    margin-bottom: 1.5rem;
+  }
+  .qty-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+  .qty input {
+    width: 6rem;
+  }
+  .bulk {
+    margin-bottom: 1.6rem;
+  }
+  .confirm {
+    padding: 0.8rem;
+    border: 1px solid var(--line);
+    background: var(--white);
+    margin-bottom: 1rem;
+  }
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .actions .btn:first-child {
+    flex: 1;
+    min-width: 200px;
+  }
+  .h-details {
+    font-size: var(--t-md);
+    margin-top: 2rem;
+  }
+  .details {
+    padding-left: 1.2rem;
+  }
+  @media (max-width: 800px) {
+    .product {
+      grid-template-columns: 1fr;
+    }
+    .art {
+      position: static;
+      max-width: 420px;
+    }
+  }
+</style>

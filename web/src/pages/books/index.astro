@@ -1,0 +1,13 @@
+---
+import Base from "../../layouts/Base.astro";
+import Catalogue from "../../components/Catalogue.astro";
+import { PRODUCTS } from "../../../../shared/catalog";
+const items = PRODUCTS.filter((p) => ["ritual", "book"].includes(p.kind));
+---
+<Base title="Ritual books and Masonic books" description="Pocket rituals, Laws and Constitutions, history and symbolism.">
+  <section class="section wrap">
+    <h1>Books and rituals</h1>
+    <p class="muted">Pocket rituals for English and Scottish workings, the Irish Laws and Constitutions, and reading for new Master Masons.</p>
+    <Catalogue products={items} facets={["kind", "constitution", "body"]} />
+  </section>
+</Base>

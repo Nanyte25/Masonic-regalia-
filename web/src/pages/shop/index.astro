@@ -1,0 +1,11 @@
+---
+import Base from "../../layouts/Base.astro";
+import Catalogue from "../../components/Catalogue.astro";
+import { PRODUCTS } from "../../../../shared/catalog";
+---
+<Base title="All products" description="Every apron, collar, jewel, book and gift in the shop.">
+  <section class="section wrap">
+    <h1>All products</h1>
+    <Catalogue products={PRODUCTS} />
+  </section>
+</Base>

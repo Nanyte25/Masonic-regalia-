@@ -1,0 +1,14 @@
+---
+import Base from "../../layouts/Base.astro";
+import { SITE } from "../../site";
+---
+<Base title="About us">
+  <section class="section wrap prose">
+    <h1>About {SITE.name}</h1>
+    <p>We supply regalia, jewellery and books to brethren in Ireland and in Irish lodges around the world. We started because Irish Constitution regalia was hard to find online, often priced in sterling, and rarely covered every order a brother belongs to.</p>
+    <p>Every embroidery request is checked by hand before work starts, so your lodge name, number and province are right the first time.</p>
+    <p>We are an independent retailer. We are not part of, and do not speak for, any Grand Lodge.</p>
+    <h2>Contact</h2>
+    <p>{SITE.email}<br />{SITE.phone}<br />{SITE.address}</p>
+  </section>
+</Base>

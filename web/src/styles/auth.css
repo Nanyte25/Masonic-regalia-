@@ -1,0 +1,10 @@
+.auth {
+  max-width: 440px;
+  margin: clamp(2rem, 6vw, 4rem) auto;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-top: 6px solid var(--navy);
+  padding: clamp(1.25rem, 4vw, 2.25rem);
+}
+.auth h1 { font-size: var(--t-xl); }
+.auth .alt { margin-top: 1.25rem; font-size: var(--t-sm); }

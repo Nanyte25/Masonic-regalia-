@@ -1,0 +1,391 @@
+---
+import Base from "../layouts/Base.astro";
+import ProductCard from "../components/ProductCard.astro";
+import { BODIES, PRODUCTS, RANKS, type Body, type Rank } from "../../../shared/catalog";
+import { formatMoney } from "../../../shared/pricing";
+import { artSvg } from "../lib/art";
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const orders: Body[] = ["craft", "royal-arch", "knight-masons", "prince-masons", "preceptory"];
+const rankOrder: Rank[] = ["member", "officer", "master", "past-master", "provincial", "grand"];
+
+// Irish items grouped by order and rank for the picker.
+const picker = Object.fromEntries(
+  orders.map((b) => {
+    const items = PRODUCTS.filter((p) => p.body === b && p.constitution === "ireland" && p.kind !== "ritual");
+    const ranks = rankOrder.filter((r) => items.some((p) => p.rank === r));
+    return [b, { label: BODIES[b].label, colour: BODIES[b].colour, ranks, items: items.map((p) => ({ id: p.id, name: p.name, kind: p.kind, rank: p.rank, price: p.price, lead: p.leadTimeDays ?? 0 })) }];
+  }),
+);
+const featured = PRODUCTS.filter((p) => p.featured && ["ring", "cufflinks", "case", "ritual"].includes(p.kind)).slice(0, 4);
+const bodyCounts = Object.fromEntries(orders.map((b) => [b, PRODUCTS.filter((p) => p.body === b).length]));
+---
+<Base>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <h1>Regalia for every degree, made to the Irish Constitution.</h1>
+        <p class="lede">Aprons, collars and jewels for lodge, chapter, council, Prince Masons and preceptory. Embroidered with your lodge number and sent from Waterford to brethren worldwide.</p>
+        <p class="muted small">English and Scottish regalia, jewellery, books and rituals too.</p>
+      </div>
+
+      <div class="picker" id="picker" aria-labelledby="picker-title">
+        <h2 id="picker-title" class="picker-title">Find your regalia</h2>
+        <div class="picker-body">
+          <div class="picker-art" id="picker-art" set:html={artSvg("apron", "craft", "member", "Master Mason apron, Irish pattern")} />
+          <div class="picker-controls">
+            <fieldset>
+              <legend>Order</legend>
+              <div class="chips" id="order-chips">
+                {orders.map((b, i) => (
+                  <label class="chip" style={`--mark:${BODIES[b].colour}`}>
+                    <input type="radio" name="order" value={b} checked={i === 0} />
+                    <span>{BODIES[b].label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Your rank</legend>
+              <div class="chips" id="rank-chips"></div>
+            </fieldset>
+          </div>
+        </div>
+        <ul class="picker-list" id="picker-list" aria-live="polite"></ul>
+        <p class="picker-note small" id="picker-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="section-head">
+      <h2>Shop by order</h2>
+      <a href={`${base}regalia/`}>See all regalia</a>
+    </div>
+    <ul class="orders">
+      {orders.map((b) => (
+        <li style={`--mark:${BODIES[b].colour};--mark-trim:${BODIES[b].trim}`}>
+          <a href={`${base}regalia/${b}/`}>
+            <span class="band" aria-hidden="true"></span>
+            <span class="o-name">{BODIES[b].label}</span>
+            <span class="o-note">{BODIES[b].note}</span>
+            <span class="o-count">{bodyCounts[b]} {bodyCounts[b] === 1 ? "item" : "items"}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="section wrap">
+    <div class="section-head">
+      <h2>Jewellery, cases and books</h2>
+      <a href={`${base}jewellery/`}>All jewellery</a>
+    </div>
+    <div class="grid">
+      {featured.map((p) => <ProductCard product={p} />)}
+    </div>
+  </section>
+
+  <section class="lodge">
+    <div class="wrap lodge-grid">
+      <div>
+        <h2>Fitting out a lodge?</h2>
+        <p>Order five or more of the same item and the discount is taken off in the basket: 5% from five, 10% from ten. For a full set of officers' collars and jewels, a new banner or a centenary jewel, send us the details and we'll quote within two working days.</p>
+        <a class="btn" href={`${base}lodge-orders/`}>Request a lodge quote</a>
+      </div>
+      <ol class="steps">
+        <li><strong>You order</strong><span>Add lodge name and number at the product page. We check every embroidery request before work starts.</span></li>
+        <li><strong>We make it</strong><span>Made-to-order regalia takes 3 to 6 weeks. The product page shows the lead time.</span></li>
+        <li><strong>It arrives tracked</strong><span>Free in Ireland over €100. We ship to every Irish province overseas too.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <script define:vars={{ picker, RANKS, base }}>
+    window.__picker = { picker, RANKS, base };
+  </script>
+  <script>
+    import { artSvg } from "../lib/art";
+    import { money, renderPrices } from "../lib/store";
+    const { picker, RANKS, base } = (window as any).__picker;
+    const art = document.getElementById("picker-art")!;
+    const rankChips = document.getElementById("rank-chips")!;
+    const list = document.getElementById("picker-list")!;
+    const note = document.getElementById("picker-note")!;
+    let order = "craft";
+    let rank = "member";
+
+    function drawRanks() {
+      const ranks: string[] = picker[order].ranks;
+      if (!ranks.includes(rank)) rank = ranks[0];
+      rankChips.innerHTML = ranks
+        .map((r) => `<label class="chip"><input type="radio" name="rank" value="${r}" ${r === rank ? "checked" : ""}><span>${RANKS[r]}</span></label>`)
+        .join("");
+    }
+    function draw() {
+      const data = picker[order];
+      const items = data.items.filter((i: any) => i.rank === rank);
+      const lead = items.find((i: any) => (i.kind === "apron" || i.kind === "set") && !/-(ea|fc)-/.test(i.id)) ?? items[0];
+      art.innerHTML = artSvg(lead?.kind ?? "apron", order as any, rank as any, lead?.name ?? "", rank === "member" && order === "craft" ? "ie-craft-mm-apron" : lead?.id ?? "");
+      list.innerHTML = items.length
+        ? items
+            .map(
+              (i: any) => `<li><a href="${base}product/${i.id}/">${i.name}</a>
+              <span class="pl-meta">${i.lead ? `${Math.ceil(i.lead / 7)} weeks` : "In stock"}</span>
+              <span class="pl-price" data-eur="${i.price}">${money(i.price)}</span></li>`,
+            )
+            .join("")
+        : `<li>We make this to order. <a href="${base}lodge-orders/">Ask for a quote</a>.</li>`;
+      note.textContent =
+        rank === "provincial" || rank === "grand"
+          ? "Provincial and Grand Officers, current and past, wear gilt jewels."
+          : order === "craft" && (rank === "officer" || rank === "master")
+            ? "Lodge officers wear silver jewels. The collar and jewel are sold separately."
+            : "";
+    }
+    document.getElementById("order-chips")!.addEventListener("change", (e) => {
+      order = (e.target as HTMLInputElement).value;
+      drawRanks();
+      draw();
+    });
+    rankChips.addEventListener("change", (e) => {
+      rank = (e.target as HTMLInputElement).value;
+      draw();
+    });
+    window.addEventListener("store:change", () => renderPrices(list));
+    drawRanks();
+    draw();
+  </script>
+</Base>
+
+<style>
+  .hero {
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    padding-block: clamp(2rem, 5vw, 4rem);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+  }
+  .hero h1 {
+    max-width: 14ch;
+  }
+  .lede {
+    font-size: var(--t-md);
+    line-height: 1.55;
+    max-width: 40ch;
+  }
+
+  .picker {
+    border: 1px solid var(--line);
+    border-top: 6px solid var(--navy);
+    background: var(--paper);
+    padding: clamp(1rem, 2.5vw, 1.75rem);
+  }
+  .picker-title {
+    font-size: var(--t-lg);
+  }
+  .picker-body {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+  .picker-art {
+    background: var(--white);
+    border: 1px solid var(--line);
+    padding: 10px;
+  }
+  .picker-art :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+  .picker fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0 0 0.9rem;
+  }
+  .picker legend {
+    font-weight: 700;
+    font-size: var(--t-sm);
+    margin-bottom: 0.4rem;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .picker :global(.chip) {
+    position: relative;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .picker :global(.chip input) {
+    position: absolute;
+    opacity: 0;
+  }
+  .picker :global(.chip span) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 36px;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--white);
+    cursor: pointer;
+  }
+  .picker :global(.chip[style] span::before) {
+    content: "";
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--mark);
+  }
+  .picker :global(.chip input:checked + span) {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #fff;
+  }
+  .picker :global(.chip input:focus-visible + span) {
+    outline: 3px solid var(--craft);
+    outline-offset: 2px;
+  }
+  .picker-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0;
+    border-top: 1px solid var(--line);
+  }
+  .picker-list :global(li) {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .picker-list :global(.pl-meta) {
+    font-size: var(--t-sm);
+    color: var(--muted);
+  }
+  .picker-list :global(.pl-price) {
+    font-weight: 600;
+  }
+  .picker-note {
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+  }
+  .picker-note:empty {
+    display: none;
+  }
+
+  .orders {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .orders a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    height: 100%;
+    padding: 0 1.1rem 1.2rem;
+    background: var(--white);
+    color: inherit;
+    text-decoration: none;
+  }
+  .orders .band {
+    display: block;
+    height: 10px;
+    margin: 0 -1.1rem 1rem;
+    background: var(--mark);
+    border-bottom: 3px solid var(--mark-trim);
+  }
+  .o-name {
+    font: var(--t-md) / 1.2 var(--serif);
+  }
+  .orders a:hover .o-name {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .o-note {
+    color: var(--muted);
+    font-size: var(--t-sm);
+    flex: 1;
+  }
+  .o-count {
+    font-size: var(--t-sm);
+    font-weight: 600;
+  }
+
+  .lodge {
+    background: var(--craft-soft);
+    padding-block: clamp(2.5rem, 6vw, 4rem);
+  }
+  .lodge-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  .steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 0 0.75rem;
+    padding: 0.9rem 0;
+    border-top: 1px solid #c7d6e8;
+  }
+  .steps li::before {
+    content: counter(step);
+    grid-row: span 2;
+    font: 1.6rem/1 var(--serif);
+    color: var(--navy-2);
+  }
+  .steps span {
+    color: var(--muted);
+  }
+
+  @media (max-width: 900px) {
+    .hero-grid,
+    .lodge-grid {
+      grid-template-columns: 1fr;
+    }
+    .orders {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 520px) {
+    .picker-body {
+      grid-template-columns: 1fr;
+    }
+    .picker-art {
+      max-width: 150px;
+    }
+    .orders {
+      grid-template-columns: 1fr;
+    }
+    .picker-list :global(li) {
+      grid-template-columns: 1fr auto;
+    }
+    .picker-list :global(.pl-meta) {
+      grid-column: 1;
+    }
+  }
+</style>

@@ -1,0 +1,215 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+<Base title="Your basket">
+  <section class="section wrap">
+    <h1>Your basket</h1>
+    <div class="basket" id="basket" hidden>
+      <div>
+        <table class="lines">
+          <thead><tr><th colspan="2">Item</th><th>Quantity</th><th class="r">Price</th></tr></thead>
+          <tbody id="lines"></tbody>
+        </table>
+      </div>
+      <aside class="summary" aria-labelledby="sum-title">
+        <h2 id="sum-title">Summary</h2>
+        <dl>
+          <dt>Delivery to</dt><dd id="region-label"></dd>
+          <dt>Items</dt><dd id="goods"></dd>
+          <dt>Delivery</dt><dd id="shipping"></dd>
+          <dt class="total">Total</dt><dd class="total" id="total"></dd>
+        </dl>
+        <p class="small muted" id="vat"></p>
+        <p class="small" id="lead"></p>
+        <button class="btn block" id="checkout" type="button">Pay securely with card</button>
+        <p class="small muted pay-note">You'll enter your card and delivery address on Stripe's secure page. Apple Pay and Google Pay work there too.</p>
+        <p class="small" id="who"></p>
+        <p id="msg" class="notice error" role="alert"></p>
+      </aside>
+    </div>
+    <div id="empty" hidden>
+      <p>Your basket is empty.</p>
+      <a class="btn" href="../regalia/">Browse regalia</a>
+    </div>
+  </section>
+
+  <script>
+    import { productById } from "../../../../shared/catalog";
+    import { formatMoney, REGIONS, toCharge } from "../../../../shared/pricing";
+    import { artSvg } from "../../lib/art";
+    import { cartSummary, getCart, getCurrency, getRegion, getToken, updateQty } from "../../lib/store";
+    import { api, showMessage, url } from "../../lib/api";
+
+    const tbody = document.getElementById("lines")!;
+    const msg = document.getElementById("msg")!;
+
+    function render() {
+      const cart = getCart();
+      const summary = cartSummary();
+      (document.getElementById("basket") as HTMLElement).hidden = !summary;
+      (document.getElementById("empty") as HTMLElement).hidden = !!summary;
+      if (!summary) return;
+      const cur = getCurrency();
+      const region = REGIONS[getRegion()];
+      const fmt = (n: number) => formatMoney(n, cur);
+      tbody.innerHTML = summary.lines
+        .map((l, i) => {
+          const p = productById.get(cart[i].id)!;
+          return `<tr>
+            <td class="thumb">${artSvg(p.kind, p.body, p.rank, "")}</td>
+            <td><a href="${url(`product/${p.id}/`)}">${p.name}</a>
+              ${l.description ? `<div class="small muted">${escapeHtml(l.description)}</div>` : ""}
+              ${l.discountPct ? `<div class="small ok">${l.discountPct}% lodge discount applied</div>` : ""}
+              ${p.leadTimeDays ? `<div class="small muted">Made to order, about ${Math.ceil(p.leadTimeDays / 7)} weeks</div>` : ""}</td>
+            <td><div class="stepper">
+              <button type="button" data-i="${i}" data-d="-1" aria-label="One fewer ${p.name}">−</button>
+              <input aria-label="Quantity of ${p.name}" data-i="${i}" type="number" min="0" max="100" value="${l.qty}">
+              <button type="button" data-i="${i}" data-d="1" aria-label="One more ${p.name}">+</button>
+            </div>
+            <button type="button" class="linkish small" data-remove="${i}">Remove</button></td>
+            <td class="r">${fmt(toCharge(l.total, getRegion(), cur))}</td>
+          </tr>`;
+        })
+        .join("");
+      document.getElementById("region-label")!.textContent = region.label;
+      document.getElementById("goods")!.textContent = fmt(summary.goods);
+      document.getElementById("shipping")!.textContent = summary.shipping === 0 ? "Free" : fmt(summary.shipping);
+      document.getElementById("total")!.textContent = fmt(summary.total);
+      document.getElementById("vat")!.textContent = region.vat
+        ? `Includes ${fmt(summary.vatIncluded)} VAT at 23%.`
+        : "Irish VAT removed for delivery outside the EU. Import duty or local tax may be due on arrival.";
+      document.getElementById("lead")!.textContent = summary.leadDays
+        ? `Some items are made to order. We'll send everything together in about ${Math.ceil(summary.leadDays / 7)} weeks.`
+        : `Delivery in ${region.days} after dispatch.`;
+      document.getElementById("who")!.innerHTML = getToken()
+        ? "This order will appear in your account."
+        : `Checking out as a guest. <a href="${url("account/signin/")}?next=basket">Sign in</a> to keep your order history.`;
+    }
+    function escapeHtml(s: string) {
+      return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    }
+
+    tbody.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      if (t.dataset.remove) updateQty(Number(t.dataset.remove), 0);
+      if (t.dataset.d) {
+        const i = Number(t.dataset.i);
+        updateQty(i, getCart()[i].qty + Number(t.dataset.d));
+      }
+    });
+    tbody.addEventListener("change", (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.dataset.i) updateQty(Number(t.dataset.i), Math.floor(Number(t.value)));
+    });
+    window.addEventListener("store:change", render);
+    render();
+
+    const btn = document.getElementById("checkout") as HTMLButtonElement;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "Opening secure payment…";
+      showMessage(msg, "", "");
+      try {
+        const { url: stripeUrl } = await api<{ url: string }>("/checkout", {
+          method: "POST",
+          json: { lines: getCart(), region: getRegion(), currency: getCurrency() },
+        });
+        location.href = stripeUrl;
+      } catch (err) {
+        showMessage(msg, (err as Error).message);
+        btn.disabled = false;
+        btn.textContent = "Pay securely with card";
+      }
+    });
+  </script>
+</Base>
+
+<style>
+  .basket {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 2.5rem;
+    align-items: start;
+  }
+  .basket[hidden],
+  #empty[hidden] {
+    display: none;
+  }
+  .lines :global(.thumb) {
+    width: 72px;
+  }
+  .lines :global(.thumb svg) {
+    width: 64px;
+    height: 64px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    padding: 6px;
+  }
+  .lines :global(.r),
+  .r {
+    text-align: right;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .lines :global(.ok) {
+    color: var(--ok);
+  }
+  .lines :global(.stepper) {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    background: var(--white);
+  }
+  .lines :global(.stepper button) {
+    width: 36px;
+    border: 0;
+    background: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  .lines :global(.stepper input) {
+    width: 3.2rem;
+    border: 0;
+    text-align: center;
+    min-height: 36px;
+    padding: 0;
+  }
+  .summary {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-top: 6px solid var(--navy);
+    padding: 1.5rem;
+    position: sticky;
+    top: 90px;
+  }
+  .summary dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+  }
+  .summary dd {
+    margin: 0;
+    text-align: right;
+  }
+  .summary dt.total { grid-column: 1; }
+  .summary .total {
+    font-weight: 700;
+    font-size: var(--t-md);
+    border-top: 1px solid var(--line);
+    padding-top: 0.6rem;
+  }
+  .pay-note {
+    margin-top: 0.75rem;
+  }
+  @media (max-width: 860px) {
+    .basket {
+      grid-template-columns: 1fr;
+    }
+    .summary {
+      position: static;
+    }
+    .lines thead {
+      display: none;
+    }
+  }
+</style>

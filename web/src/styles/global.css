@@ -1,0 +1,330 @@
+@import url("https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Public+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  --navy: #14284b;
+  --navy-2: #1f3a66;
+  --paper: #f6f7f5;
+  --white: #ffffff;
+  --craft: #7fa7d6;
+  --craft-soft: #e3edf8;
+  --crimson: #8e1b2a;
+  --silver: #b9c0c7;
+  --gilt: #b48a3c;
+  --line: #d9dde2;
+  --ink: #14284b;
+  --muted: #55627a;
+  --ok: #2f6b4f;
+  --danger: #a3231f;
+
+  --serif: "Libre Caslon Text", Georgia, serif;
+  --sans: "Public Sans", system-ui, sans-serif;
+
+  /* Modular scale 1.25 */
+  --t-sm: 0.85rem;
+  --t-base: 1rem;
+  --t-md: 1.25rem;
+  --t-lg: 1.563rem;
+  --t-xl: 1.953rem;
+  --t-2xl: 2.441rem;
+  --t-3xl: clamp(2.2rem, 4.6vw, 3.6rem);
+
+  --r-sm: 3px;
+  --r-md: 6px;
+  --wrap: 1180px;
+  --gap: clamp(1rem, 2.5vw, 2rem);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 var(--t-base) / 1.6 var(--sans);
+  text-rendering: optimizeLegibility;
+}
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+a {
+  color: var(--navy-2);
+  text-underline-offset: 3px;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0 0 0.5em;
+  letter-spacing: -0.01em;
+}
+h1 {
+  font-size: var(--t-3xl);
+}
+h2 {
+  font-size: var(--t-xl);
+}
+h3 {
+  font-size: var(--t-md);
+}
+p {
+  margin: 0 0 1em;
+  max-width: 68ch;
+}
+:focus-visible {
+  outline: 3px solid var(--craft);
+  outline-offset: 2px;
+}
+.wrap {
+  width: min(100% - 2 * var(--gap), var(--wrap));
+  margin-inline: auto;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: var(--t-sm);
+}
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.skip {
+  position: absolute;
+  left: -999px;
+}
+.skip:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 100;
+  background: var(--white);
+  padding: 0.5rem 1rem;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--navy);
+  border-radius: var(--r-sm);
+  background: var(--navy);
+  color: var(--white);
+  font: 600 var(--t-base) / 1 var(--sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover {
+  background: var(--navy-2);
+}
+.btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--navy);
+}
+.btn.ghost:hover {
+  background: var(--craft-soft);
+}
+.btn.block {
+  width: 100%;
+}
+.linkish {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--navy-2);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Forms */
+label {
+  display: block;
+  font-weight: 600;
+  font-size: var(--t-sm);
+  margin-bottom: 0.3rem;
+}
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--navy-2);
+}
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  min-height: 0;
+  accent-color: var(--navy);
+}
+.field {
+  margin-bottom: 1rem;
+}
+.field .hint {
+  font-size: var(--t-sm);
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+.check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-weight: 400;
+  font-size: var(--t-base);
+}
+.check input {
+  margin-top: 0.35rem;
+}
+.notice {
+  padding: 0.8rem 1rem;
+  border-left: 3px solid var(--craft);
+  background: var(--craft-soft);
+  margin: 1rem 0;
+}
+.notice.error {
+  border-color: var(--danger);
+  background: #f8e9e8;
+}
+.notice.ok {
+  border-color: var(--ok);
+  background: #e6f0eb;
+}
+.notice:empty {
+  display: none;
+}
+
+/* Swatch used to signal which order a thing belongs to */
+.order-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--t-sm);
+  color: var(--muted);
+}
+.order-mark::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--mark, var(--navy));
+  box-shadow: inset 0 0 0 2px var(--mark-trim, var(--silver));
+}
+
+/* Product grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 2rem 1.5rem;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+.card .art {
+  aspect-ratio: 1;
+  background: var(--white);
+  border-bottom: 3px solid var(--mark, var(--line));
+  display: grid;
+  place-items: center;
+  padding: 12%;
+  margin-bottom: 0.8rem;
+}
+.card h3 {
+  font-size: 1.08rem;
+  margin-bottom: 0.2rem;
+}
+.card:hover h3 {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.card .price {
+  font-weight: 600;
+  margin-top: 0.35rem;
+}
+.card .lead {
+  font-size: var(--t-sm);
+  color: var(--muted);
+}
+
+.section {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+}
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.section-head h2 {
+  margin: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+th {
+  font-size: var(--t-sm);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.prose {
+  max-width: 70ch;
+}
+.prose h2 {
+  margin-top: 2rem;
+}
+.prose li {
+  margin-bottom: 0.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,223 @@
+---
+import Base from "../../layouts/Base.astro";
+import { CONSTITUTIONS, RANKS } from "../../../../shared/catalog";
+---
+<Base title="Your account">
+  <section class="section wrap" id="acct" hidden>
+    <div class="acct-head">
+      <div>
+        <h1 id="hello">Your account</h1>
+        <p class="muted" id="email"></p>
+      </div>
+      <div class="head-actions">
+        <a class="btn ghost" id="admin-link" hidden>Shop admin</a>
+        <button class="btn ghost" id="signout" type="button">Sign out</button>
+      </div>
+    </div>
+    <p id="welcome" class="notice ok" hidden>Welcome. Add your lodge details below so we can pre-fill embroidery and checkout.</p>
+
+    <div class="tabs" role="tablist" aria-label="Account sections">
+      <button role="tab" aria-selected="true" aria-controls="t-orders" id="b-orders">Orders</button>
+      <button role="tab" aria-selected="false" aria-controls="t-profile" id="b-profile">Lodge and profile</button>
+      <button role="tab" aria-selected="false" aria-controls="t-saved" id="b-saved">Saved items</button>
+      <button role="tab" aria-selected="false" aria-controls="t-quotes" id="b-quotes">Lodge quotes</button>
+      <button role="tab" aria-selected="false" aria-controls="t-security" id="b-security">Security</button>
+    </div>
+
+    <div role="tabpanel" id="t-orders" aria-labelledby="b-orders">
+      <div id="orders"><p class="muted">Loading your orders…</p></div>
+    </div>
+
+    <div role="tabpanel" id="t-profile" aria-labelledby="b-profile" hidden>
+      <form id="profile" class="form-grid" novalidate>
+        <div class="field"><label for="name">Name</label><input id="name" name="name" autocomplete="name" /></div>
+        <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel" /></div>
+        <div class="field"><label for="lodge_name">Lodge name</label><input id="lodge_name" name="lodge_name" placeholder="e.g. St John's" /></div>
+        <div class="field"><label for="lodge_number">Lodge number</label><input id="lodge_number" name="lodge_number" placeholder="e.g. 42" /></div>
+        <div class="field"><label for="province">Province</label><input id="province" name="province" placeholder="e.g. South Eastern" /></div>
+        <div class="field"><label for="constitution">Constitution</label>
+          <select id="constitution" name="constitution"><option value="">Choose</option>
+            {Object.entries(CONSTITUTIONS).filter(([k]) => k !== "any").map(([k, v]) => <option value={k}>{v}</option>)}
+          </select></div>
+        <div class="field"><label for="rank">Rank</label>
+          <select id="rank" name="rank"><option value="">Choose</option>
+            {Object.entries(RANKS).filter(([k]) => k !== "any").map(([k, v]) => <option value={k}>{v}</option>)}
+          </select></div>
+        <label class="check field full"><input type="checkbox" name="marketing" id="marketing" /><span>Email me about new regalia and offers</span></label>
+        <div class="full"><button class="btn" type="submit">Save details</button></div>
+        <p id="profile-msg" class="notice full" role="status"></p>
+      </form>
+    </div>
+
+    <div role="tabpanel" id="t-saved" aria-labelledby="b-saved" hidden>
+      <div id="saved" class="grid"></div>
+    </div>
+
+    <div role="tabpanel" id="t-quotes" aria-labelledby="b-quotes" hidden>
+      <div id="quotes"></div>
+      <a class="btn ghost" href="../lodge-orders/">Request a new quote</a>
+    </div>
+
+    <div role="tabpanel" id="t-security" aria-labelledby="b-security" hidden>
+      <form id="pw" class="narrow" novalidate>
+        <h2>Change password</h2>
+        <div class="field" id="cur-wrap"><label for="currentPassword">Current password</label><input id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" /></div>
+        <div class="field"><label for="newPassword">New password</label><input id="newPassword" name="newPassword" type="password" autocomplete="new-password" minlength="10" /><p class="hint">At least 10 characters.</p></div>
+        <button class="btn" type="submit">Update password</button>
+        <p id="pw-msg" class="notice" role="status"></p>
+      </form>
+      <div class="narrow danger-zone">
+        <h2>Delete account</h2>
+        <p class="muted">This removes your profile and saved items. We keep order records for 6 years because tax law requires it.</p>
+        <button class="btn ghost" id="delete" type="button">Delete my account</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    import { productById } from "../../../../shared/catalog";
+    import { formatMoney, type Currency } from "../../../../shared/pricing";
+    import { api, showMessage, url } from "../../lib/api";
+    import { getToken, setToken } from "../../lib/store";
+    import { artSvg } from "../../lib/art";
+
+    if (!getToken()) location.replace(url("account/signin/"));
+
+    const $ = (id: string) => document.getElementById(id)!;
+    const STATUS: Record<string, string> = { paid: "Paid, being prepared", in_production: "Being made", shipped: "Shipped", cancelled: "Cancelled", refunded: "Refunded" };
+    const esc = (s: string) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+
+    // Tabs
+    const tabs = [...document.querySelectorAll<HTMLButtonElement>("[role=tab]")];
+    function select(tab: HTMLButtonElement) {
+      for (const t of tabs) {
+        const on = t === tab;
+        t.setAttribute("aria-selected", String(on));
+        t.tabIndex = on ? 0 : -1;
+        $(t.getAttribute("aria-controls")!).hidden = !on;
+      }
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => select(t));
+      t.addEventListener("keydown", (e) => {
+        const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; select(n); n.focus(); }
+      });
+    });
+
+    async function load() {
+      let user: any;
+      try {
+        ({ user } = await api("/me"));
+      } catch {
+        setToken(null);
+        location.replace(url("account/signin/"));
+        return;
+      }
+      $("acct").hidden = false;
+      $("hello").textContent = user.name ? `Hello, ${user.name.split(" ")[0]}` : "Your account";
+      $("email").textContent = user.email;
+      if (new URLSearchParams(location.search).get("welcome")) { $("welcome").hidden = false; select($("b-profile") as HTMLButtonElement); }
+      if (user.role === "admin") { const a = $("admin-link") as HTMLAnchorElement; a.hidden = false; a.href = url("admin/"); }
+      const form = $("profile") as HTMLFormElement;
+      for (const k of ["name", "phone", "lodge_name", "lodge_number", "province", "constitution", "rank"]) (form.elements.namedItem(k) as HTMLInputElement).value = user[k] ?? "";
+      ($("marketing") as HTMLInputElement).checked = user.marketing;
+      if (!user.hasPassword) $("cur-wrap").hidden = true;
+
+      api("/me/orders").then(({ orders }) => {
+        $("orders").innerHTML = orders.length
+          ? `<table><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Status</th><th>Total</th></tr></thead><tbody>${orders
+              .map((o: any) => `<tr><td>${esc(o.id)}</td><td>${new Date(o.created_at + "Z").toLocaleDateString("en-IE")}</td>
+                <td>${o.lines.map((l: any) => `${l.qty} × ${esc(l.name)}`).join("<br>")}</td>
+                <td>${STATUS[o.status] ?? esc(o.status)}${o.tracking ? `<br><span class="small">Tracking: ${esc(o.tracking)}</span>` : ""}</td>
+                <td>${formatMoney(o.total, o.currency as Currency)}</td></tr>`)
+              .join("")}</tbody></table>`
+          : `<p>No orders yet.</p><a class="btn" href="${url("regalia/")}">Browse regalia</a>`;
+      });
+      api("/me/wishlist").then(({ items }) => {
+        $("saved").innerHTML = items.length
+          ? items.map((id: string) => {
+              const p = productById.get(id);
+              return p ? `<a class="card" href="${url(`product/${p.id}/`)}"><div class="art">${artSvg(p.kind, p.body, p.rank, p.name)}</div><h3>${esc(p.name)}</h3></a>` : "";
+            }).join("")
+          : `<p>Nothing saved yet. Use "Save for later" on any product page.</p>`;
+      });
+      api("/me/quotes").then(({ quotes }) => {
+        $("quotes").innerHTML = quotes.length
+          ? `<table><thead><tr><th>Requested</th><th>Lodge</th><th>Details</th><th>Status</th></tr></thead><tbody>${quotes
+              .map((q: any) => `<tr><td>${new Date(q.created_at + "Z").toLocaleDateString("en-IE")}</td><td>${esc(q.lodge)}</td><td>${esc(q.details).slice(0, 160)}</td><td>${esc(q.status)}</td></tr>`)
+              .join("")}</tbody></table>`
+          : "<p>No quote requests yet.</p>";
+      });
+    }
+
+    ($("profile") as HTMLFormElement).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const d: any = Object.fromEntries(new FormData(e.target as HTMLFormElement));
+      d.marketing = !!d.marketing;
+      try { await api("/me", { method: "PATCH", json: d }); showMessage($("profile-msg"), "Details saved.", "ok"); }
+      catch (x) { showMessage($("profile-msg"), (x as Error).message); }
+    });
+    ($("pw") as HTMLFormElement).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const d = Object.fromEntries(new FormData(e.target as HTMLFormElement));
+      try { await api("/me", { method: "PATCH", json: d }); showMessage($("pw-msg"), "Password updated.", "ok"); (e.target as HTMLFormElement).reset(); }
+      catch (x) { showMessage($("pw-msg"), (x as Error).message); }
+    });
+    $("signout").addEventListener("click", async () => {
+      await api("/auth/logout", { method: "POST" }).catch(() => {});
+      setToken(null);
+      location.href = url("");
+    });
+    $("delete").addEventListener("click", async () => {
+      const b = $("delete") as HTMLButtonElement;
+      if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "Press again to delete permanently"; return; }
+      await api("/me", { method: "DELETE" });
+      setToken(null);
+      location.href = url("");
+    });
+    load();
+  </script>
+</Base>
+
+<style>
+  .acct-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .head-actions { display: flex; gap: .5rem; }
+  .tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--line);
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+  .tabs button {
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    padding: 0.75rem 1rem;
+    font: 500 var(--t-base) var(--sans);
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tabs button[aria-selected="true"] {
+    color: var(--ink);
+    border-color: var(--navy);
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 1.5rem;
+    max-width: 760px;
+  }
+  .form-grid .full { grid-column: 1 / -1; }
+  .narrow { max-width: 440px; }
+  .danger-zone { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+  @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+</style>

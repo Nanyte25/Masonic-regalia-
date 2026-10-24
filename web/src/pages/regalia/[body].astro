@@ -1,0 +1,22 @@
+---
+import Base from "../../layouts/Base.astro";
+import Catalogue from "../../components/Catalogue.astro";
+import { PRODUCTS, BODIES, type Body } from "../../../../shared/catalog";
+export function getStaticPaths() {
+  return (Object.keys(BODIES) as Body[]).filter((b) => b !== "general").map((body) => ({ params: { body } }));
+}
+const body = Astro.params.body as Body;
+const b = BODIES[body];
+const items = PRODUCTS.filter((p) => p.body === body);
+---
+<Base title={`${b.label} regalia`} description={`${b.label} regalia: ${b.note}`}>
+  <div class="band" style={`--mark:${b.colour};--mark-trim:${b.trim}`}></div>
+  <section class="section wrap">
+    <h1>{b.label}</h1>
+    <p class="muted">{b.note}</p>
+    <Catalogue products={items} facets={["constitution", "kind", "rank"]} />
+  </section>
+</Base>
+<style>
+  .band { height: 12px; background: var(--mark); border-bottom: 4px solid var(--mark-trim); }
+</style>

@@ -1,0 +1,180 @@
+---
+import { BODIES, CONSTITUTIONS, KINDS, RANKS, type Product } from "../../../shared/catalog";
+import ProductCard from "./ProductCard.astro";
+
+interface Props {
+  products: Product[];
+  facets?: ("constitution" | "body" | "kind" | "rank")[];
+}
+const { products, facets = ["constitution", "body", "kind", "rank"] } = Astro.props;
+
+const count = <K extends keyof Product>(key: K) => {
+  const m = new Map<string, number>();
+  for (const p of products) m.set(String(p[key]), (m.get(String(p[key])) ?? 0) + 1);
+  return m;
+};
+const groups = {
+  constitution: { label: "Constitution", names: CONSTITUTIONS as Record<string, string>, counts: count("constitution") },
+  body: { label: "Order", names: Object.fromEntries(Object.entries(BODIES).map(([k, v]) => [k, v.label])), counts: count("body") },
+  kind: { label: "Type", names: KINDS as Record<string, string>, counts: count("kind") },
+  rank: { label: "Rank", names: RANKS as Record<string, string>, counts: count("rank") },
+};
+---
+<div class="catalogue">
+  <aside class="filters" aria-label="Filter products">
+    <div class="field">
+      <label for="q">Search</label>
+      <input id="q" type="search" placeholder="Apron, jewel, ritual…" autocomplete="off" />
+    </div>
+    {facets.map((f) => {
+      const g = groups[f];
+      const entries = [...g.counts.entries()];
+      if (entries.length < 2) return null;
+      return (
+        <fieldset class="facet">
+          <legend>{g.label}</legend>
+          {entries.map(([value, n]) => (
+            <label class="check">
+              <input type="checkbox" name={f} value={value} />
+              <span>{g.names[value] ?? value} <span class="muted">({n})</span></span>
+            </label>
+          ))}
+        </fieldset>
+      );
+    })}
+  </aside>
+  <div>
+    <div class="toolbar">
+      <p class="muted" aria-live="polite"><span id="shown">{products.length}</span> products</p>
+      <label class="sort">
+        <span class="visually-hidden">Sort by</span>
+        <select id="sort" aria-label="Sort by">
+          <option value="featured">Featured first</option>
+          <option value="price-asc">Price, low to high</option>
+          <option value="price-desc">Price, high to low</option>
+          <option value="name">Name</option>
+        </select>
+      </label>
+      <button type="button" class="linkish" id="clear-filters">Clear filters</button>
+    </div>
+    <div class="grid" id="results">
+      {products.map((p) => <ProductCard product={p} />)}
+    </div>
+    <p id="empty" class="notice" hidden>Nothing matches those filters. Clear a filter or try a different word.</p>
+  </div>
+</div>
+
+<script>
+  const root = document.querySelector(".catalogue")!;
+  const grid = root.querySelector<HTMLElement>("#results")!;
+  const cards = [...grid.querySelectorAll<HTMLElement>(".card")];
+  const original = new Map(cards.map((c, i) => [c, i]));
+  const q = root.querySelector<HTMLInputElement>("#q")!;
+  const sort = root.querySelector<HTMLSelectElement>("#sort")!;
+  const boxes = [...root.querySelectorAll<HTMLInputElement>("input[type=checkbox]")];
+
+  // Restore state from the URL so filtered views can be shared.
+  const params = new URLSearchParams(location.search);
+  q.value = params.get("q") ?? "";
+  sort.value = params.get("sort") ?? "featured";
+  for (const b of boxes) b.checked = params.getAll(b.name).includes(b.value);
+
+  function apply() {
+    const term = q.value.trim().toLowerCase();
+    const active: Record<string, string[]> = {};
+    for (const b of boxes) if (b.checked) (active[b.name] ??= []).push(b.value);
+    let shown = 0;
+    for (const c of cards) {
+      const ok =
+        (!term || term.split(/\s+/).every((t) => c.dataset.search!.includes(t))) &&
+        Object.entries(active).every(([k, vals]) => vals.includes(c.dataset[k]!));
+      c.hidden = !ok;
+      if (ok) shown++;
+    }
+    const sorted = [...cards].sort((a, b) => {
+      switch (sort.value) {
+        case "price-asc": return +a.dataset.price! - +b.dataset.price!;
+        case "price-desc": return +b.dataset.price! - +a.dataset.price!;
+        case "name": return a.dataset.name!.localeCompare(b.dataset.name!);
+        default: return original.get(a)! - original.get(b)!;
+      }
+    });
+    grid.append(...sorted);
+    root.querySelector("#shown")!.textContent = String(shown);
+    (root.querySelector("#empty") as HTMLElement).hidden = shown > 0;
+
+    const p = new URLSearchParams();
+    if (term) p.set("q", term);
+    if (sort.value !== "featured") p.set("sort", sort.value);
+    for (const [k, vals] of Object.entries(active)) vals.forEach((v) => p.append(k, v));
+    history.replaceState(null, "", p.toString() ? `?${p}` : location.pathname);
+  }
+  q.addEventListener("input", apply);
+  sort.addEventListener("change", apply);
+  boxes.forEach((b) => b.addEventListener("change", apply));
+  root.querySelector("#clear-filters")!.addEventListener("click", () => {
+    q.value = "";
+    boxes.forEach((b) => (b.checked = false));
+    apply();
+  });
+  apply();
+</script>
+
+<style>
+  .catalogue {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    gap: 2.5rem;
+    align-items: start;
+  }
+  .filters {
+    position: sticky;
+    top: 90px;
+  }
+  .facet {
+    border: 0;
+    border-top: 1px solid var(--line);
+    padding: 1rem 0 0.5rem;
+    margin: 0 0 0.5rem;
+  }
+  .facet legend {
+    font-weight: 700;
+    padding: 0;
+    margin-bottom: 0.5rem;
+  }
+  .facet .check {
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .toolbar p {
+    margin: 0 auto 0 0;
+  }
+  .sort select {
+    min-width: 190px;
+  }
+  @media (max-width: 800px) {
+    .catalogue {
+      grid-template-columns: 1fr;
+    }
+    .filters {
+      position: static;
+    }
+    .facet {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1rem;
+    }
+    .facet legend {
+      width: 100%;
+    }
+    .toolbar {
+      flex-wrap: wrap;
+    }
+  }
+</style>

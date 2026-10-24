@@ -1,0 +1,46 @@
+---
+import Base from "../../../layouts/Base.astro";
+import "../../../styles/auth.css";
+---
+<Base title="Reset your password">
+  <div class="auth">
+    <h1>Reset your password</h1>
+    <p id="msg" class="notice" role="status"></p>
+    <form id="request" novalidate>
+      <p class="muted">Enter the email you registered with and we'll send a link to set a new password.</p>
+      <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required /></div>
+      <button class="btn block" type="submit">Send reset link</button>
+    </form>
+    <form id="confirm" hidden novalidate>
+      <div class="field"><label for="password">New password</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required /><p class="hint">At least 10 characters.</p></div>
+      <button class="btn block" type="submit">Set new password</button>
+    </form>
+  </div>
+  <script>
+    import { api, showMessage, url } from "../../../lib/api";
+    import { setToken } from "../../../lib/store";
+    const msg = document.getElementById("msg");
+    const token = new URLSearchParams(location.hash.slice(1)).get("token");
+    const req = document.getElementById("request") as HTMLFormElement;
+    const conf = document.getElementById("confirm") as HTMLFormElement;
+    if (token) { req.hidden = true; conf.hidden = false; history.replaceState(null, "", location.pathname); }
+    api<{ passwordReset: boolean }>("/auth/providers").then((p) => {
+      if (!p.passwordReset && !token) showMessage(msg, "Password reset by email isn't switched on yet. Email us and we'll help you get back in.", "");
+    }).catch(() => {});
+    req.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/auth/password-reset", { method: "POST", json: { email: new FormData(req).get("email") } });
+        showMessage(msg, "If that email has an account, a reset link is on its way. It works for one hour.", "ok");
+      } catch (x) { showMessage(msg, (x as Error).message, "error"); }
+    });
+    conf.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const r = await api<{ token: string }>("/auth/password-reset/confirm", { method: "POST", json: { token, password: new FormData(conf).get("password") } });
+        setToken(r.token);
+        location.href = url("account/");
+      } catch (x) { showMessage(msg, (x as Error).message, "error"); }
+    });
+  </script>
+</Base>
