@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -109,23 +109,35 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.pages.outputs.page_url }}
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - id: cfg
-        uses: actions/configure-pages@v5
       - name: Build site
         working-directory: web
         env:
-          SITE: ${{ steps.cfg.outputs.origin }}
-          BASE: ${{ steps.cfg.outputs.base_path }}/
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
           PUBLIC_API_URL: ${{ needs.api.outputs.url || vars.API_URL }}
         run: |
-          echo "API: ${PUBLIC_API_URL:-not set}"
+          export SITE="https://${OWNER,,}.github.io" BASE="/${REPO}/"
+          echo "Site: $SITE$BASE  API: ${PUBLIC_API_URL:-not set}"
           npm ci && npx astro build
+      # Works when Settings > Pages > Source = "GitHub Actions"
+      - uses: actions/configure-pages@v5
+        continue-on-error: true
       - uses: actions/upload-pages-artifact@v3
         with: { path: web/dist }
       - id: pages
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+      # Works when Source = "Deploy from a branch" with branch gh-pages / (root)
+      - name: Publish gh-pages branch
+        run: |
+          cd web/dist
+          git init -q -b gh-pages
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "Deploy ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
